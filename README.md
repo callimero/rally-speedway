@@ -3,7 +3,7 @@
 Ein Nachbau des C64-Klassikers **Rally Speedway** (John Anderson, Adventure
 International, 1983/84) für die Fantasy-Konsole [PICO-8](https://www.lexaloffle.com/pico-8.php).
 
-**[▶ Im Browser spielen](https://DEIN-NAME.github.io/rally-speedway/)**
+**[▶ Im Browser spielen](https://callimero.github.io/rally-speedway/)**
 
 ![Rally Speedway](rally.p8.png)
 
