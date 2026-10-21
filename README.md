@@ -14,7 +14,7 @@ International, 1983/84) für die Fantasy-Konsole [PICO-8](https://www.lexaloffle
 - Lenken wie ein RC-Car: links/rechts relativ zur Fahrtrichtung, 32 Richtungen
 - Rutschen, Bremsspuren, nasse und vereiste Straße, Aquaplaning (für Profis)
 - Crash: Feuer, der Fahrer springt raus, brennt, wälzt sich und schimpft
-- Computergegner **Blau** auf der Ideallinie, 3 Runden, Abstand in Sekunden
+- Computergegner **Blau** auf der Ideallinie, 1–6 Runden, Abstand in Sekunden
 
 ## Grafik
 
@@ -87,6 +87,8 @@ die quadratischen PICO-8-Pixel verlor zu viele Details.
 | 🅾️ / ❎ | bremsen |
 | beliebige Richtung | Start |
 | ⬇️ + 🅾️ | zurück ins Menü |
+
+Im Menü gibt es unter „steuerung/hilfe“ eine Hilfeseite.
 
 Im Browser: Pfeiltasten, **Z**/**X** (oder **C**/**V**) als Knöpfe; Gamepads
 werden erkannt.

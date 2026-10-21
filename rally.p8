@@ -60,7 +60,6 @@ aqua_grip=0.3
 aqua_lenk=0.3
 
 -- blau (computergegner)
-renn_runden=3   -- runden gegen blau
 gegner_tempo=0.98 -- grundtempo
 gegner_anpassen=0.025 -- gummi-
                 -- band je feld
@@ -118,8 +117,9 @@ motor_max=32    -- ... bei vmax
 motor_kurve=0.7 -- <1: erst schnell
 
 --== menue-startwerte ==
-start_wahl={gegner=2,strecke=1,
- strasse=1,tempo=2,beschl=2}
+start_wahl={gegner=2,runden=3,
+ strecke=1,strasse=1,tempo=2,
+ beschl=2}
 
 --== testen ==
 zeige_linie=false -- ideallinie
@@ -144,6 +144,8 @@ end
 function _update60()
  if modus=="menue" then
   update_menue()
+ elseif modus=="hilfe" or modus=="info" then
+  if (btnp(4) or btnp(5)) modus="menue"
  elseif modus=="ergebnis" then
   update_ergebnis()
  else
@@ -154,6 +156,10 @@ end
 function _draw()
  if modus=="menue" then
   draw_menue()
+ elseif modus=="hilfe" then
+  draw_hilfe()
+ elseif modus=="info" then
+  draw_info()
  else
   draw_rennen()
   if (modus=="ergebnis") draw_ergebnis()
@@ -172,29 +178,43 @@ strasse_spr=2
 
 -- ====== menue ======
 menue={
+ {"hilfe","steuerung/hilfe",nil,"hilfe"},
  {"strecke","strecke",{"1","2","3","4","5","6"}},
  {"gegner","gegner",{"nein","ja"}},
+ {"runden","runden",{1,2,3,4,5,6}},
  {"strasse","strasse",{"trocken","nass","eis"}},
  {"tempo","hoechst-tempo",tempo_wahl},
  {"beschl","beschleunigung",{"langsam","normal","schnell"}},
+ {"info","ueber das spiel",nil,"info"},
 }
 
 function zum_menue()
  modus="menue"
  sfx(-1,0) sfx(-1,1)
- menue_zeile=1
+ menue_zeile=2
+ menue_oben=1
  menue_bild=0
  vorschau_fuer=nil
 end
 
 function update_menue()
- if (btnp(2)) menue_zeile=(menue_zeile-2)%#menue+1
- if (btnp(3)) menue_zeile=menue_zeile%#menue+1
+ -- liste stoppt oben und unten
+ if (btnp(2)) menue_zeile=max(menue_zeile-1,1)
+ if (btnp(3)) menue_zeile=min(menue_zeile+1,#menue)
+ menue_oben=mid(menue_zeile-menue_zeilen+1,menue_oben,menue_zeile)
  local m=menue[menue_zeile]
- local n=#m[3]
- if (btnp(0)) opt[m[1]]=(opt[m[1]]-2)%n+1
- if (btnp(1)) opt[m[1]]=opt[m[1]]%n+1
- if (btnp(4) or btnp(5)) neues_rennen()
+ if m[3] then
+  local n=#m[3]
+  if (btnp(0)) opt[m[1]]=(opt[m[1]]-2)%n+1
+  if (btnp(1)) opt[m[1]]=opt[m[1]]%n+1
+ end
+ if btnp(4) or btnp(5) then
+  if m[3] then
+   neues_rennen()
+  else
+   modus=m[4]
+  end
+ end
  menue_bild+=1
  -- vorschau neu bei anderer
  -- strecke oder belag
@@ -210,7 +230,7 @@ function draw_menue()
  cls(11)
  -- banner, blau faehrt drueber
  rectfill(0,0,127,19,6)
- for x=0,127,2 do
+ for x=0,127 do
   local c=x%4<2 and 8 or 7
   pset(x,0,c) pset(x,19,c)
  end
@@ -220,14 +240,23 @@ function draw_menue()
  pal(10,gegner_farbe)
  draw_auto(menue_bild%152-12,10,0.25)
  pal(10,10)
- for i,m in ipairs(menue) do
+ -- scrollliste: menue_zeilen
+ -- sichtbar, pfeile wenn mehr
+ for j=1,menue_zeilen do
+  local i=menue_oben+j-1
+  local m=menue[i]
   local c=i==menue_zeile and 10 or 7
-  local w=m[3][opt[m[1]]]
-  if (m[1]=="tempo") w..=" mph"
-  if (i==menue_zeile) w="\139 "..w.." \145"
-  mitte(m[2].."  "..w,15+i*8,c)
+  local s=m[2]
+  if m[3] then
+   local w=m[3][opt[m[1]]]
+   if (m[1]=="tempo") w..=" mph"
+   if (i==menue_zeile) w="\139 "..w.." \145"
+   s..="  "..w
+  end
+  mitte(s,22+j*8,c)
  end
- mitte("\151/\142 = bremse",64,7)
+ if (menue_oben>1) mitte("\148",22,6)
+ if (menue_oben+menue_zeilen<=#menue) mitte("\131",22+(menue_zeilen+1)*8,6)
  if (not kurs) return
  karte_zeigen(vorschau_x,vorschau_y)
  -- punkt faehrt den kurs ab,
@@ -238,6 +267,63 @@ function draw_menue()
  if t()%0.8<0.5 then
   x,y=karte_xy(vorschau_x,vorschau_y,feld_punkt(kurs[1]))
   rectfill(x-1,y-2,x,y+2,7)
+ end
+ -- start-hinweis blinkt (1 hz)
+ if (t()%1<0.5) mitte("rennen starten \151",vorschau_y+22,10)
+end
+
+-- seite: schwarz, kopfzeile mit
+-- randsteinen, unten "zurueck"
+function seite(titel)
+ cls(0)
+ rectfill(0,0,127,9,6)
+ for x=0,127 do
+  local c=x%4<2 and 8 or 7
+  pset(x,0,c) pset(x,9,c)
+ end
+ mitte(titel,3,10)
+ if (t()%1<0.6) mitte("\151/\142 = zurueck",118,6)
+end
+
+function draw_hilfe()
+ seite("steuerung")
+ local z={
+  {"\139\145","lenken wie rc-car"},
+  {"\151/\142","bremsen"},
+  {"\148\131\139\145","losfahren"},
+  {"\131+\142","zurueck ins menue"},
+ }
+ for i,l in ipairs(z) do
+  schrift(l[1],4,8+i*9,10)
+  schrift(l[2],42,8+i*9,7)
+ end
+ mitte("tipps",64,10)
+ local tipps={
+  "gas gibt der wagen allein",
+  "kurz tippen: seitlich driften",
+  "blau passt sich dir an",
+  "+zeit rueckstand, -vorsprung",
+ }
+ for i,l in ipairs(tipps) do
+  schrift(l,4,65+i*8,7)
+ end
+end
+
+-- inhalt folgt noch
+function draw_info()
+ seite("ueber das spiel")
+ local z={
+  "rally speedway fuer pico-8",
+  "",
+  "nach dem c64-original von",
+  "john anderson (1983/84)",
+  "",
+  "grafik: callimero",
+  "",
+  "(mehr folgt)",
+ }
+ for i,l in ipairs(z) do
+  mitte(l,14+i*9,7)
  end
 end
 
@@ -253,7 +339,7 @@ end
 function karte_malen(x0,y0,sc)
  poke(0x5f55,karte_puffer)
  camera()
- rectfill(x0-2,y0-2,x0+65,y0+51,3)
+ rectfill(x0-2,y0-2,x0+65,y0+52,3)
  for i=1,#kurs do
   local ax,ay=feld_punkt(kurs[i])
   local bx,by=feld_punkt(kurs[i%#kurs+1])
@@ -271,7 +357,7 @@ end
 function karte_zeigen(x0,y0)
  local a=(x0-2)\2
  local n=(x0+65)\2-a+1
- for y=y0-2,y0+51 do
+ for y=y0-2,min(y0+52,127) do
   local o=y*64+a
   memcpy(0x6000+o,karte_puffer*256+o,n)
  end
@@ -560,7 +646,7 @@ function runde_fertig(t)
  if (t==auto) sfx(3,2)
  -- im ziel: erster = sieger,
  -- ende wenn beide da sind
- if gegner and t.runde>renn_runden then
+ if gegner and t.runde>opt.runden then
   t.fertig=true
   sieger=sieger or t
  end
@@ -679,7 +765,7 @@ function draw_anzeige()
  schrift("best",104,114,7)
  schrift(zeit_text(w.beste),99,121,7)
  if gegner then
-  schrift("runde "..min(w.runde,renn_runden).."/"..renn_runden,2,2,7)
+  schrift("runde "..min(w.runde,opt.runden).."/"..opt.runden,2,2,7)
   -- abstand: + rueckstand,
   -- - vorsprung
   local d=abstand()
@@ -842,27 +928,27 @@ function update_ergebnis()
 end
 
 function draw_ergebnis()
- rectfill(8,22,119,106,0)
- rect(8,22,119,106,7)
+ rectfill(8,22,119,109,0)
+ rect(8,22,119,109,7)
  mitte(sieger==auto and "gelb gewinnt!" or "blau gewinnt!",28,sieger==auto and 10 or 12)
  schrift("runde",14,42,6)
  schrift("gelb",58,42,10)
  schrift("blau",92,42,12)
  local sa,sg=0,0
- for r=1,renn_runden do
-  local y=42+r*9
+ for r=1,opt.runden do
+  local y=42+r*7
   schrift(r,22,y,7)
   local a,b=auto.zeiten[r],gegner.zeiten[r]
   schrift(a and zeit_text(a) or "-",52,y,7)
   schrift(b and zeit_text(b) or "-",86,y,7)
   sa+=a or 0 sg+=b or 0
  end
- local y=46+renn_runden*9+4
+ local y=46+opt.runden*7+4
  line(14,y-2,113,y-2,5)
  schrift("summe",14,y+1,6)
- schrift(#auto.zeiten>=renn_runden and zeit_text(sa) or "-",52,y+1,7)
- schrift(#gegner.zeiten>=renn_runden and zeit_text(sg) or "-",86,y+1,7)
- if (ergebnis_t>60 and t()%1<0.6) mitte("\151/\142 = menue",98,7)
+ schrift(#auto.zeiten>=opt.runden and zeit_text(sa) or "-",52,y+1,7)
+ schrift(#gegner.zeiten>=opt.runden and zeit_text(sg) or "-",86,y+1,7)
+ if (ergebnis_t>60 and t()%1<0.6) mitte("\151/\142 = menue",102,7)
 end
 
 -- ====== effekte ======
@@ -1022,7 +1108,8 @@ welt_b,welt_h=32*64,25*56
 -- karte im menue
 puffer={0x80,0xa0}
 karte_puffer=0xc0
-vorschau_x,vorschau_y=32,74
+menue_zeilen=4 -- sichtbare zeilen
+vorschau_x,vorschau_y=32,73
 pyo=0 -- zeilen-versatz puffer
 
 -- ====== strecke laden ======

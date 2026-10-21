@@ -150,4 +150,22 @@ Programmstruktur steht in [`STRUKTUR.md`](STRUKTUR.md).
   aus. Vorher wurde nur die Tonhöhe auf 0 gesetzt, und das brummte weiter.
 - **Fehler behoben:** Der Fahrer eines Crashs blieb nach dem Neustart im Auto
   gespeichert (`t.fahrer`). Er wird jetzt gelöscht.
-- **Titel-Banner** mit rot-weißen Randsteinen.
+- **Titel-Banner** mit rot-weißen Randsteinen, durchgehend je 2 Pixel rot
+  und 2 Pixel weiß.
+- **Menü:**
+  - Rundenzahl wählbar (1–6, `opt.runden` statt der Konstante
+    `renn_runden`)
+  - neue Zeile „steuerung/hilfe“ mit eigener Hilfeseite (Steuerung und
+    Tipps); dafür ist die Zeile „❎/🅾️ = bremse“ weggefallen
+  - Scrollliste: `menue_zeilen` (4) Zeilen sichtbar, ⬆️/⬇️ zeigen an, dass
+    es weitergeht. Sie stoppt oben und unten (kein Überlauf).
+  - Reihenfolge: zuerst „steuerung/hilfe“, zuletzt „ueber das spiel“
+    (eigene Seite, Inhalt folgt). Die Auswahl startet auf „strecke“.
+  - „rennen starten ❎“ blinkt mit 1 Hz über der Karte.
+  - Hilfeseite ohne die Tipps zu Büschen und Wasser (die sollen Spieler
+    selbst entdecken). Zeilenabstand 8, Text mit Umriss, Karte im dunkelgrünen
+    Kasten darunter. (Zwischenschritte mit 7 Zeilen und Text ohne Umriss
+    waren zu eng bzw. gefielen nicht.)
+  - Behoben: Der Kopierbereich der Karte lief bis zu 1 Zeile über den
+    Bildschirm hinaus in den Welt-Puffer.
+- **Ergebnistafel** auch für 6 Runden.

@@ -36,7 +36,7 @@ Geordnet nach Wichtigkeit fürs Spielgefühl:
 1. **Spielgefühl**: Tempo/Beschleunigung/Bremse, Haftung, Lenkung, Gelände
    (Gras, Wasser, Busch, Aquaplaning), Blau, Rempeln, Kamera, Unfall
 2. **Optik + Ton**: Farben, Spuren, Spritzwasser, Rauch, Motorton
-3. **Menü-Startwerte** (`start_wahl`)
+3. **Menü-Startwerte** (`start_wahl`, inkl. Rundenzahl gegen Blau)
 4. **Testen**: `zeige_linie` (Ideallinie einzeichnen), `nur_blau` (nur der
    Computer fährt, Kamera folgt ihm)
 
@@ -60,6 +60,7 @@ nicht.
 `modus` steuert das Spiel:
 
 ```
+"hilfe" / "info" <──❎/🅾️ auf "steuerung/hilfe" / "ueber das spiel"──> "menue"
 "menue" ──❎/🅾️──> "rennen" ──beide im ziel (mit blau)──> "ergebnis"
    ^                 │  ⬇️+🅾️ / pausenmenue              │ ❎/🅾️
    └─────────────────┴──────────────────────────────────┘
