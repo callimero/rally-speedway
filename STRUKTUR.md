@@ -60,7 +60,7 @@ nicht.
 `modus` steuert das Spiel:
 
 ```
-"menue" ──❎/🅾️──> "rennen" ──3 runden (mit blau)──> "ergebnis"
+"menue" ──❎/🅾️──> "rennen" ──beide im ziel (mit blau)──> "ergebnis"
    ^                 │  ⬇️+🅾️ / pausenmenue              │ ❎/🅾️
    └─────────────────┴──────────────────────────────────┘
 ```
@@ -72,7 +72,12 @@ Ein Frame im Rennen (`update_rennen`):
 3. Gelb: `update_unfall` **oder** Eingabe → `update_auto` → `pruefe_unfall`
    → `unfall_start` → `pruefe_kurs`
 4. Blau: `update_gegner` (gleiche Physik, Eingabe von `ki_eingabe`)
-5. Rauch, Spritzwasser, Kamera, Ton
+   - Wer `renn_runden` Runden hat, ist `fertig`. Der Erste ist `sieger`.
+     `im_ziel` lässt das Auto ausrollen, der Fahrer steigt aus und winkt.
+     Sind beide ausgestiegen, folgt nach `ziel_winken` Frames
+     `rennen_ende`.
+5. Rauch, Spritzwasser, Kamera, Ton. Der Motor ist aus, solange Gelb brennt
+   oder ausgestiegen ist (`motor_an`).
 
 Zeichnen (`draw_rennen`): Welt-Puffer nachziehen → auf den Schirm kopieren →
 Bremsspuren → (Ideallinie) → Blau → Gelb → Spritzwasser → Rauch → Anzeige.

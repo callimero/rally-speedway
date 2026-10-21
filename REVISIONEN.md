@@ -137,3 +137,17 @@ Programmstruktur steht in [`STRUKTUR.md`](STRUKTUR.md).
   hatten das nicht gefunden, weil sie sofort losfahren; jetzt wird auch der
   Zustand vor dem Start geprüft. Merke: In Funktionen, die `t()` benutzen,
   das Auto nie `t` nennen.
+
+## Nach v5 – Zieleinlauf, Motor (2026-10-21)
+
+- **Zieleinlauf:** Wer die letzte Runde beendet, rollt hinter der Ziellinie
+  aus, der Fahrer steigt aus und winkt (Bilder 2/3), bis der Zweite im Ziel
+  ist. Auf dem Schirm stehen „gewonnen!“ oder „ziel!“. Wenn beide
+  ausgestiegen sind, wird noch `ziel_winken` Frames (2 s) gewunken, erst
+  dann kommt der Ergebnis-Bildschirm. Vorher kam er sofort, und man sah die
+  Szene gar nicht.
+- **Motor:** Bei einem Crash und nach dem Aussteigen ist der Motor-Sound ganz
+  aus. Vorher wurde nur die Tonhöhe auf 0 gesetzt, und das brummte weiter.
+- **Fehler behoben:** Der Fahrer eines Crashs blieb nach dem Neustart im Auto
+  gespeichert (`t.fahrer`). Er wird jetzt gelöscht.
+- **Titel-Banner** mit rot-weißen Randsteinen.

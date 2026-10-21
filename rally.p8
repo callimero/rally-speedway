@@ -90,6 +90,8 @@ brenn_ab=0.7    -- anteil vmax: ab
 fahrer_tempo=7  -- frames je bild
 feuer_tempo=5   -- frames je bild
 unfall_nach=30  -- frames bis neu
+ziel_winken=120 -- frames winken,
+                -- dann auswertung
 
 --== optik + ton ==
 
@@ -209,7 +211,8 @@ function draw_menue()
  -- banner, blau faehrt drueber
  rectfill(0,0,127,19,6)
  for x=0,127,2 do
-  pset(x,0,8) pset(x,19,8)
+  local c=x%4<2 and 8 or 7
+  pset(x,0,c) pset(x,19,c)
  end
  print("\^w\^trally",26,5,0)
  print("\^w\^trally",25,4,10)
@@ -303,7 +306,10 @@ function neues_rennen()
  rauch={}
  gischt={}
  quietscht=false
- sfx(-1,1)
+ motor_an=false
+ sieger=nil
+ ziel_t=nil
+ sfx(-1,0) sfx(-1,1)
 end
 
 -- ein auto (gelb oder blau):
@@ -341,17 +347,16 @@ function update_rennen()
  if not gestartet then
   -- start: irgendeine richtung
   for b=0,3 do
-   if btn(b) or nur_blau then
-    gestartet=true
-    sfx(0,0)
-   end
+   if (btn(b) or nur_blau) gestartet=true
   end
  else
   rennzeit+=1
-  t.rz+=1
-  if (gegner) gegner.rz+=1
+  if (not t.fertig) t.rz+=1
+  if (gegner and not gegner.fertig) gegner.rz+=1
   if t.unfall>0 then
    update_unfall(t)
+  elseif t.fertig then
+   im_ziel(t)
   else
    local turn,br=0,btn(4) or btn(5)
    if (btn(0)) turn-=1
@@ -361,7 +366,15 @@ function update_rennen()
    unfall_start(t,pruefe_unfall(t))
    pruefe_kurs(t)
   end
-  if (gegner) update_gegner(gegner)
+  if gegner then
+   update_gegner(gegner)
+   -- beide ausgestiegen: noch
+   -- winken, dann auswertung
+   if auto.fahrer and auto.fertig and gegner.fahrer and gegner.fertig then
+    ziel_t=(ziel_t or 0)+1
+    if (ziel_t>=ziel_winken) rennen_ende()
+   end
+  end
  end
  update_rauch()
  update_gischt()
@@ -503,6 +516,7 @@ function update_unfall(t)
  t.nach-=1
  if t.nach<=0 then
   t.unfall=0
+  t.fahrer=nil
   neustart(t)
  end
 end
@@ -544,8 +558,31 @@ function runde_fertig(t)
  if (not t.beste or t.rz<t.beste) t.beste=t.rz
  t.rz=0
  if (t==auto) sfx(3,2)
+ -- im ziel: erster = sieger,
+ -- ende wenn beide da sind
  if gegner and t.runde>renn_runden then
-  rennen_ende(t)
+  t.fertig=true
+  sieger=sieger or t
+ end
+end
+
+-- im ziel: ausrollen, aussteigen,
+-- winken bis der andere kommt
+function im_ziel(t)
+ local f=t.fahrer
+ if not f then
+  update_auto(t,0,true)
+  if t.v<0.05 then
+   t.vx,t.vy,t.v,t.vq=0,0,0,0
+   local x,y=welt_punkt(t,10,0)
+   t.fahrer={x=x,y=y,i=1,z=0,dir=1,folge=folge_wink}
+  end
+ else
+  f.z+=1
+  if f.z>=fahrer_tempo then
+   f.z=0
+   f.i=f.i%#f.folge+1
+  end
  end
 end
 
@@ -564,8 +601,14 @@ function update_kamera(t)
 end
 
 function update_ton(t)
+ -- motor aus, solange er brennt
+ -- oder ausgestiegen ist
+ local an=gestartet and t.unfall==0 and not (t.fertig and t.fahrer)
+ if an!=motor_an then
+  motor_an=an
+  sfx(an and 0 or -1,0)
+ end
  local p=motor_min+(motor_max-motor_min)*mid(0,abs(t.v)/vmax,1)^motor_kurve
- if (t.unfall>0) p=0
  motor_ton(flr(p))
  local q=t.rutscht and t.unfall==0
  if q!=quietscht then
@@ -612,6 +655,8 @@ function draw_wagen(t,x,y,blau)
   spr(feuer_spr+t.unfall\feuer_tempo%3,flr(x)-4,flr(y)-4)
   palt()
   draw_fahrer(t.fahrer,not blau and overall_gelb)
+ elseif t.fertig and t.fahrer then
+  draw_fahrer(t.fahrer,not blau and overall_gelb)
  end
 end
 
@@ -647,6 +692,9 @@ function draw_anzeige()
  if not gestartet and t()%1<0.6 then
   schrift("joystick = start",33,56,10)
  end
+ if w.fertig and t()%1<0.7 then
+  mitte(sieger==w and "gewonnen!" or "ziel!",40,10)
+ end
 end
 
 -- ====== blau ======
@@ -655,6 +703,8 @@ function update_gegner(g)
  local crash=g.unfall>0
  if crash then
   update_unfall(g)
+ elseif g.fertig then
+  im_ziel(g)
  else
   -- gummiband: vorn langsamer,
   -- hinten schneller
@@ -667,8 +717,7 @@ function update_gegner(g)
  g.x=auto.x+welt_dx(g.x-auto.x)
  g.y=auto.y+welt_dy(g.y-auto.y)
  if (crash) return
- unfall_start(g,pruefe_unfall(g))
- pruefe_kurs(g)
+ if (not g.fertig) unfall_start(g,pruefe_unfall(g)) pruefe_kurs(g)
  if (auto.unfall==0) rempeln(auto,g)
 end
 
@@ -779,9 +828,8 @@ end
 
 -- ====== rennende ======
 
-function rennen_ende(t)
+function rennen_ende()
  modus="ergebnis"
- sieger=t
  ergebnis_t=0
  sfx(-1,0) sfx(-1,1)
  sfx(3,2)
@@ -957,6 +1005,7 @@ fahrer_brennt={[10]=true,[11]=true,
  [19]=true,[20]=true}
 -- folgen aus dem c64-code
 folge_lauf=split("4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,2,3,2,3,2,3,2,3,2,3,2,3")
+folge_wink=split("2,3")
 folge_brenn=split("10,11,10,11,10,11,10,11,10,11,10,11,13,16,17,18,19,20,14,15,16,17,18,19,20,14,15,16,17,18,6,2,3,2,3,2,3,2,3,2")
 -- auto-punkte (rechts,vorn) px
 auto_ecken={{-3,-4},{3,-4},{-4,3},{4,3}}
