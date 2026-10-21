@@ -177,3 +177,16 @@ Programmstruktur steht in [`STRUKTUR.md`](STRUKTUR.md).
   - engeres Gummiband (`gegner_min` 0.85, `gegner_max` 1.04)
   - bremst etwas weniger vor Kurven (`gegner_kurve` 0.8)
 - **Menü:** startet mit Strecke 6.
+
+## Fehlerkorrekturen (2026-10-21)
+
+- **Rundenwechsel:** `fortschritt()` zählte am Rundenende falsch. Auf dem
+  letzten Feld (`nxt=1`) fiel der Wert zurück, statt weiter zu steigen. Das
+  störte an jedem Rundenwechsel Gummiband und Abstandsanzeige. Jetzt steigt
+  der Wert stetig.
+- **Zieleinlauf:** Sind beide im Ziel, zeigt die Anzeige die Differenz der
+  Zielzeiten (`t.ziel`). Vorher sprang sie auf 0.0.
+
+(Versuche mit besserem Bremsen für Blau bei Nässe und Eis, geglätteter
+Anzeige und Temperament im Zweikampf liegen in `rally_versuch_blau.p8`; sie
+sind vorerst nicht übernommen.)

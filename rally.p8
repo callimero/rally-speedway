@@ -648,6 +648,7 @@ function runde_fertig(t)
  -- ende wenn beide da sind
  if gegner and t.runde>opt.runden then
   t.fertig=true
+  t.ziel=rennzeit
   sieger=sieger or t
  end
 end
@@ -672,9 +673,11 @@ function im_ziel(t)
  end
 end
 
--- gefahrene felder insgesamt
+-- gefahrene felder insgesamt,
+-- steigt stetig (nxt=1 heisst:
+-- letztes feld der runde)
 function fortschritt(t)
- return t.runde*#kurs+t.nxt
+ return t.runde*#kurs+(t.nxt-2)%#kurs
 end
 
 function update_kamera(t)
@@ -871,6 +874,9 @@ end
 -- abstand zu blau in frames:
 -- + rueckstand, - vorsprung
 function abstand()
+ -- beide im ziel: differenz der
+ -- zielzeiten
+ if (auto.ziel and gegner.ziel) return auto.ziel-gegner.ziel
  local pa,pg=fortschritt(auto),fortschritt(gegner)
  if (pa<pg) return rennzeit-(gegner.zb[pa] or rennzeit)
  if (pa>pg) return (auto.zb[pg] or rennzeit)-rennzeit
