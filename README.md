@@ -36,6 +36,8 @@ werden erkannt.
 | `rally.p8` | die Cart (in PICO-8: `load rally`) |
 | `rally.p8.png` | dieselbe Cart als Bild-Datei |
 | `rally.lua` | der Quellcode zum Lesen |
+| `STRUKTUR.md` | Aufbau des Programms (Tabs, Ablauf, Physik, Welt, Speicher) |
+| `REVISIONEN.md` | Entstehung und Begründungen, Version für Version |
 
 Die Streckendaten (Raster und Ideallinie) liegen als Bitstrom im
 Sound-Speicher (SFX 8–63) der Cart, nicht im Quellcode.
