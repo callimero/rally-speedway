@@ -626,15 +626,15 @@ end
 
 -- anzeige unten wie im original
 function draw_anzeige()
- local t=auto
+ local w=auto
  schrift("time",9,114,7)
- schrift(zeit_text(t.rz),5,121,7)
+ schrift(zeit_text(w.rz),5,121,7)
  schrift("last",57,114,7)
- schrift(zeit_text(t.zeiten[#t.zeiten]),52,121,7)
+ schrift(zeit_text(w.zeiten[#w.zeiten]),52,121,7)
  schrift("best",104,114,7)
- schrift(zeit_text(t.beste),99,121,7)
+ schrift(zeit_text(w.beste),99,121,7)
  if gegner then
-  schrift("runde "..min(t.runde,renn_runden).."/"..renn_runden,2,2,7)
+  schrift("runde "..min(w.runde,renn_runden).."/"..renn_runden,2,2,7)
   -- abstand: + rueckstand,
   -- - vorsprung
   local d=abstand()
@@ -642,7 +642,7 @@ function draw_anzeige()
   local s=(d>0 and "+" or d<0 and "-" or " ")..a\60 .."."..a%60\6
   schrift(s,126-#s*4,2,d>0 and 7 or 10)
  else
-  schrift("runde "..t.runde,2,2,7)
+  schrift("runde "..w.runde,2,2,7)
  end
  if not gestartet and t()%1<0.6 then
   schrift("joystick = start",33,56,10)

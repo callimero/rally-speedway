@@ -126,3 +126,9 @@ Programmstruktur steht in [`STRUKTUR.md`](STRUKTUR.md).
   (Code 16 % kürzer).
 - **Geprüft:** gleiche Rundenzeiten auf allen 6 Strecken (Blau allein und
   gegen den Autopiloten) wie vorher.
+- **Fehler nach dem Aufräumen behoben:** In `draw_anzeige` hat
+  `local t=auto` die PICO-8-Zeitfunktion `t()` verdeckt. Vor dem Start gab es
+  deshalb einen Laufzeitfehler (blinkendes „joystick = start“). Die Testtreiber
+  hatten das nicht gefunden, weil sie sofort losfahren; jetzt wird auch der
+  Zustand vor dem Start geprüft. Merke: In Funktionen, die `t()` benutzen,
+  das Auto nie `t` nennen.
