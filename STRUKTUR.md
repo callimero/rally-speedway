@@ -2,7 +2,8 @@
 
 Nachbau von *Rally Speedway* (C64, John Anderson, 1983/84). Dieses Dokument
 beschreibt den Aufbau von `rally.p8`. Die Entstehungsgeschichte steht in
-[`REVISIONEN.md`](REVISIONEN.md).
+[`REVISIONEN.md`](REVISIONEN.md). Was sich vom Original unterscheidet,
+steht in der `README.md` des Repos (Abschnitt „Unterschiede zum Original“).
 
 ## Dateien
 
