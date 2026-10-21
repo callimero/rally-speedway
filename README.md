@@ -3,6 +3,14 @@
 Ein Nachbau des C64-Klassikers **Rally Speedway** (John Anderson, Adventure
 International, 1983/84) für die Fantasy-Konsole [PICO-8](https://www.lexaloffle.com/pico-8.php).
 
+Das Spiel ist genial, nicht so sehr das Rennen nach Zeit: Nein mit einem Kumpel hart um den Sieg kämpfen, 
+dabei auch mal den anderen ins Aus schubsen. Fehler machen sich wieder durch geschicktes driften ran arbeiten.
+Wenn ich mich recht erinnere konnte man in ein paar Strecken auch abkürzen. Ich habe in meinem Leben seit dem Amiga 
+immer wieder probiert einen Clone zu schreiben, die Physik hab ich immer ganz gut hinbekommen, aber fertig wurde es nie.
+Jetzt ein neuer Versuch auf Pico8 aber selbst mit Claudes Hilfe war das zu viel Arbeit. Also haben wir das Original etwas 
+"geplündert" und die Tracks ausgelesen. Zum Glück blieb noch viel an den Sprites zu tun und das ganze halbwegs auf Spaß
+zu optimieren. 
+
 **[▶ Im Browser spielen](https://callimero.github.io/rally-speedway/)**
 
 ![Rally Speedway](rally.p8.png)
