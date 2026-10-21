@@ -169,3 +169,11 @@ Programmstruktur steht in [`STRUKTUR.md`](STRUKTUR.md).
   - Behoben: Der Kopierbereich der Karte lief bis zu 1 Zeile über den
     Bildschirm hinaus in den Welt-Puffer.
 - **Ergebnistafel** auch für 6 Runden.
+
+## Feinschliff von callimero (2026-10-21)
+
+- **Sounds:** Motor, Quietschen und Crash (SFX 0–2) neu abgestimmt.
+- **Blau:**
+  - engeres Gummiband (`gegner_min` 0.85, `gegner_max` 1.04)
+  - bremst etwas weniger vor Kurven (`gegner_kurve` 0.8)
+- **Menü:** startet mit Strecke 6.

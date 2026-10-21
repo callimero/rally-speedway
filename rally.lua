@@ -60,11 +60,11 @@ aqua_lenk=0.3
 gegner_tempo=0.98 -- grundtempo
 gegner_anpassen=0.025 -- gummi-
                 -- band je feld
-gegner_min=0.8  -- tempo-grenzen
-gegner_max=1.08
+gegner_min=0.85  -- tempo-grenzen
+gegner_max=1.04 --8
 gegner_blick=20 -- px voraus auf
                 -- der ideallinie
-gegner_kurve=0.9 -- bremst vor
+gegner_kurve=0.8 -- bremst vor
                 -- kurven
 gegner_toleranz=0.008 -- lenkt ab
                 -- dieser abweichung
@@ -115,7 +115,7 @@ motor_kurve=0.7 -- <1: erst schnell
 
 --== menue-startwerte ==
 start_wahl={gegner=2,runden=3,
- strecke=1,strasse=1,tempo=2,
+ strecke=6,strasse=1,tempo=2,
  beschl=2}
 
 --== testen ==
