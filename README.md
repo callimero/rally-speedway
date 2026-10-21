@@ -16,6 +16,12 @@ International, 1983/84) für die Fantasy-Konsole [PICO-8](https://www.lexaloffle
 - Crash: Feuer, der Fahrer springt raus, brennt, wälzt sich und schimpft
 - Computergegner **Blau** auf der Ideallinie, 3 Runden, Abstand in Sekunden
 
+## Grafik
+
+Alle Sprites (Auto, Fahrer, Randsteine) hat callimero neu gezeichnet. Die
+C64-Pixel sind doppelt so breit wie hoch, die automatische Umrechnung auf
+die quadratischen PICO-8-Pixel verlor zu viele Details.
+
 ## Steuerung
 
 | Taste | Funktion |

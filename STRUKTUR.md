@@ -42,6 +42,18 @@ Geordnet nach Wichtigkeit fürs Spielgefühl:
 Geschwindigkeiten sind in Pixel pro Frame (60 Frames/s). Alles, was „Anteil“
 heißt, ist ein Faktor auf die Höchstgeschwindigkeit bzw. die Haftung.
 
+## Grafik
+
+Alle Sprites hat **callimero von Hand neu gezeichnet**: das Auto in allen
+Richtungen, den Fahrer mit allen Bildern und die Zeichen mit den Randsteinen.
+Grund ist das andere Seitenverhältnis der Pixel. Ein C64-Multicolor-Pixel ist
+doppelt so breit wie hoch (2:1), PICO-8-Pixel sind quadratisch. Bei der
+automatischen Umrechnung (ein Multicolor-Pixel = ein PICO-Pixel, je zwei
+Zeilen zusammengefasst) stimmten zwar die Proportionen, aber Details wie Kopf,
+Arme, Räder und die Randsteine an Schrägen gingen verloren. Die Werkzeuge
+liefern deshalb nur Vorlagen; `original.py` überschreibt die gemalten Sprites
+nicht.
+
 ## Ablauf
 
 `modus` steuert das Spiel:
@@ -165,10 +177,10 @@ setzt es ins letzte Kursfeld. Für Gelb und Blau gilt dasselbe.
 
 | Bereich | Inhalt |
 |---|---|
-| Sprites 64–79, 80–95, 96, 97, 112, 113 | Auto, 9 Richtungen à 2 × 2 (von Hand gemalt) |
+| Sprites 64–79, 80–95, 96, 97, 112, 113 | Auto, 9 Richtungen à 2 × 2 (von callimero gemalt) |
 | Sprites 98–100 | Feuer |
-| Sprites 104–111, 120–126 | Fahrer, 15 Bilder (von Hand gemalt) |
-| übrige Sprites 1–127, 224–255 | C64-Zeichen (Randsteine von Hand) |
+| Sprites 104–111, 120–126 | Fahrer, 15 Bilder (von callimero gemalt) |
+| übrige Sprites 1–127, 224–255 | C64-Zeichen (Randsteine von callimero gemalt) |
 | Sprites 128–223 | belegt durch Map-Zeilen 32–55 – **nicht bemalen** |
 | Map-Zeilen 0–55 | die 28 Teile als Zeichen-Raster |
 | SFX 0–4 | Motor, Quietschen, Crash, Runde, Rempeln (5–7 frei) |

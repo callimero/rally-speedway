@@ -15,7 +15,7 @@ Programmstruktur steht in [`STRUKTUR.md`](STRUKTUR.md).
   8 × 8 war zu klein. Ein Multicolor-Pixel ist 1 PICO-Pixel breit, je zwei
   Zeilen werden zusammengefasst.
 - **32 Richtungen** wie im Original. Gespeichert sind 9 Sprites (0–90°),
-  der Rest entsteht durch Spiegeln. Die Sprites hat der Benutzer von Hand
+  der Rest entsteht durch Spiegeln. Die Sprites hat callimero von Hand
   gemalt.
 - **Original ausgelesen** (`c64werkzeug/`): Die T64-Datei ist zweifach
   gepackt; entpackt wurde sie mit py65 (6502-Emulation). Gefunden wurden:
@@ -24,9 +24,14 @@ Programmstruktur steht in [`STRUKTUR.md`](STRUKTUR.md).
   - Zeichensatz $3800
   - 29 Streckenteile ab $A000 (16 × 14 Zeichen)
   - 6 Strecken als Bitstrom (32 × 25 Teile, ringsum geschlossene Welt)
+- **Alle Sprites neu gezeichnet** von callimero: Auto, Fahrer und die
+  Zeichen mit den Randsteinen. C64-Multicolor-Pixel sind doppelt so breit wie
+  hoch (2:1). Die automatische Umrechnung auf quadratische PICO-8-Pixel (je
+  zwei Zeilen zusammengefasst) traf zwar die Proportionen, verlor aber zu viele
+  Details. Die umgerechneten Sprites dienten nur als Vorlage.
 - **Feuer:** Die Original-Flamme gefiel nicht, das 8 × 8-Feuer aus der
   ersten Version ist geblieben.
-- **Fahrer:** aus dem Original übernommen und vom Benutzer nachgezeichnet
+- **Fahrer:** aus dem Original übernommen und von callimero nachgezeichnet
   (Overall, Helm, Schuhe, Flammen).
 
 ## v1 – `rally_v1.p8`
@@ -96,7 +101,7 @@ Programmstruktur steht in [`STRUKTUR.md`](STRUKTUR.md).
 ## v5 – `rally_v5.p8`
 
 - **Rot-weiße Randsteine:** Die automatische Umwandlung klappte an den
-  Schrägen nicht, der Benutzer hat sie von Hand gezeichnet.
+  Schrägen nicht, callimero hat sie von Hand gezeichnet.
   `original.py` behält seitdem alle Zeichen-Sprites (`--zeichen` erzeugt
   sie neu).
 - **Crash fair:** Blau bekommt dieselbe Fahrer-Animation wie Gelb.
