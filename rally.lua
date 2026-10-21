@@ -9,24 +9,11 @@
 --        autos, blau, effekte)
 -- tab 2: welt, technik, helfer
 
---== spielgefuehl ==
+--== spieler (gelb) ==
 
--- tempo
-tempo_wahl={60,80,100,120,150}
-                -- menue (mph)
-px_mph=0.02     -- px/frame je mph
-beschl_wahl={0.006,0.012,0.024}
-                -- langsam/normal/
-                -- schnell
 bremse=0.03     -- bremsknopf
-
--- haftung: querkorrektur/frame,
--- darueber rutscht der wagen
-grip_wahl={0.03,0.018,0.013}
-                -- trocken/nass/eis
 rutsch_ab=0.15  -- ab da quietscht
                 -- es + bremsspur
-
 -- lenkung: 32 richtungen,
 -- einschlag sammelt sich
 lenk_tempo=0.0055 -- umdr./frame
@@ -39,6 +26,50 @@ lenk_drift=0.7  -- fahrt geht vor-
                 -- her mit (0..1)
 lenk_rueck=0.05 -- einschlag zurueck
                 -- je frame
+
+--== blau (gegner) ==
+
+gegner_tempo=0.98 -- grundtempo
+gegner_anpassen=0.025 -- gummi-
+                -- band je feld
+gegner_min=0.85 -- tempo-grenzen
+gegner_max=1.04
+gegner_blick=20 -- px voraus auf
+                -- der ideallinie
+gegner_kurve={0.4,0.4,0.4} -- bremst
+                -- vor kurven je
+                -- belag (trocken/
+                -- nass/eis)
+gegner_toleranz=0.008 -- lenkt ab
+                -- dieser abweichung
+gegner_brems=0.023 -- bremst ab
+                -- dieser abweichung
+rempel_abstand=7 -- px
+rempel_stoss=0.2 -- abprall
+rempel_pause=20 -- frames je knall
+
+--== testen ==
+zeige_linie=false -- ideallinie
+nur_blau=false  -- nur blau faehrt
+
+
+--== menue ==
+
+tempo_wahl={60,80,100,120,150}
+                -- mph
+px_mph=0.02     -- px/frame je mph
+beschl_wahl={0.006,0.012,0.024}
+                -- langsam/normal/
+                -- schnell
+-- haftung je belag: querkorrek-
+-- tur/frame, darueber rutscht er
+grip_wahl={0.03,0.018,0.013}
+                -- trocken/nass/eis
+start_wahl={gegner=2,runden=3,linie=1,
+ strecke=6,strasse=1,tempo=2,
+ beschl=2}
+
+--== umgebung ==
 
 -- gelaende (anteil vmax/grip)
 gras_max=0.45
@@ -55,32 +86,34 @@ aqua_ab=0.75    -- tempo beim rein-
 aqua_bremse=0.02 -- verlust/frame
 aqua_grip=0.3
 aqua_lenk=0.3
+-- je belag (trocken/nass/eis)
+belag_farbe={6,13,6} -- strasse
+belag_spur={5,5,13}   -- spuren
+gras_farbe={11,11,7} -- wiese
+                -- (eis: schnee)
+gras_spur={3,3,6} -- spuren darauf
+-- regen (nass)
+regen_menge=3   -- tropfen/frame
+regen_fall=60   -- fallzeit frames
+regen_wind_x=0.4 -- wind aus nord-
+regen_wind_y=0.3 -- west (px/frame)
+regen_spritz=6  -- frames weiss
+regen_farbe=12  -- fallender tropfen
+regen_max=300
+-- schnee (eis): wie regen, faellt
+-- langsamer, kein aufschlag
+schnee_menge=2
+schnee_fall=150
+schnee_wind_x=0.25
+schnee_wind_y=0.18
+schnee_farbe=7
 
--- blau (computergegner)
-gegner_tempo=0.98 -- grundtempo
-gegner_anpassen=0.025 -- gummi-
-                -- band je feld
-gegner_min=0.85  -- tempo-grenzen
-gegner_max=1.04 --8
-gegner_blick=20 -- px voraus auf
-                -- der ideallinie
-gegner_kurve=0.8 -- bremst vor
-                -- kurven
-gegner_toleranz=0.008 -- lenkt ab
-                -- dieser abweichung
-gegner_brems=0.08 -- bremst ab
-                -- dieser abweichung
-rempel_abstand=7 -- px
-rempel_stoss=0.4 -- abprall
-rempel_pause=20 -- frames je knall
+--== kamera + unfall ==
 
--- kamera
 kam_folgen=0.05 -- 1 = starr
 kam_vorschau=40 -- frames voraus
                 -- (0 = original)
 kam_rand=14     -- abstand zum rand
-
--- unfall
 brenn_ab=0.7    -- anteil vmax: ab
                 -- da brennt fahrer
 fahrer_tempo=7  -- frames je bild
@@ -89,14 +122,12 @@ unfall_nach=30  -- frames bis neu
 ziel_winken=120 -- frames winken,
                 -- dann auswertung
 
---== optik + ton ==
+--== effekte + ton ==
 
 gegner_farbe=12 -- blau statt gelb
 overall_gelb=10 -- overall gelb
                 -- (sprite: 12)
 fahrer_farbe=7  -- haut/helm
-belag_farbe={6,13,12} -- strasse
-belag_spur={5,5,13}   -- spuren
 bremsspur_ab=0.5 -- beim bremsen
 spur_max=600    -- spurpunkte
 gischt_menge=0.5 -- spritzwasser
@@ -113,14 +144,6 @@ motor_min=3     -- tonhoehe stand
 motor_max=32    -- ... bei vmax
 motor_kurve=0.7 -- <1: erst schnell
 
---== menue-startwerte ==
-start_wahl={gegner=2,runden=3,
- strecke=6,strasse=1,tempo=2,
- beschl=2}
-
---== testen ==
-zeige_linie=false -- ideallinie
-nur_blau=false  -- nur blau faehrt
 
 --== ende einstellungen ==
 
@@ -182,6 +205,7 @@ menue={
  {"strasse","strasse",{"trocken","nass","eis"}},
  {"tempo","hoechst-tempo",tempo_wahl},
  {"beschl","beschleunigung",{"langsam","normal","schnell"}},
+ {"linie","ideallinie",{"aus","an"}},
  {"info","ueber das spiel",nil,"info"},
 }
 
@@ -388,6 +412,8 @@ function neues_rennen()
  init_spur()
  rauch={}
  gischt={}
+ regen={}
+ kx_alt,ky_alt=nil,nil
  quietscht=false
  motor_an=false
  sieger=nil
@@ -462,6 +488,7 @@ function update_rennen()
  update_rauch()
  update_gischt()
  update_kamera(t)
+ if (opt.strasse>1) update_regen()
  update_ton(t)
 end
 
@@ -716,7 +743,7 @@ function draw_rennen()
  draw_puffer(cx,cy)
  camera(cx,cy)
  draw_spur()
- if (zeige_linie) draw_linie()
+ if (zeige_linie or opt.linie==2) draw_linie(zeige_linie)
  local g=gegner
  if g then
   -- blau relativ zu gelb runden
@@ -725,6 +752,7 @@ function draw_rennen()
  draw_wagen(t,t.x,t.y,nur_blau)
  draw_gischt()
  draw_rauch()
+ draw_regen()
  camera()
  draw_anzeige()
  if (g) gegner_pfeil(g,cx,cy)
@@ -844,7 +872,7 @@ function ki_eingabe(g)
   if (ra) dreh+=abs((r-ra+0.5)%1-0.5)
   ra=r
  end
- local vz=g.vmax*max(0.35,1-dreh*gegner_kurve)
+ local vz=g.vmax*max(0.35,1-dreh*gegner_kurve[opt.strasse])
  return turn,g.v>vz or abs(w)>gegner_brems and g.v>g.vmax*0.5
 end
 
@@ -927,6 +955,7 @@ end
 function update_ergebnis()
  ergebnis_t+=1
  update_rauch()
+ if (opt.strasse>1) update_regen()
  if (ergebnis_t>60 and (btnp(4) or btnp(5))) zum_menue()
 end
 
@@ -1009,6 +1038,55 @@ function spritzen(t,ub,m)
  end
 end
 
+-- regen: landepunkt dort, wo die
+-- kamera nach der fallzeit ist
+-- (beim fahren kommen die tropfen
+-- so aus der fahrtrichtung),
+-- start um den wind dagegen
+-- versetzt. auf der strasse kurz
+-- weiss (aufschlag), sonst weg
+function update_regen()
+ -- regen (nass) oder schnee (eis)
+ local schnee=opt.strasse==3
+ local menge,fall=regen_menge,regen_fall
+ local wx,wy=regen_wind_x,regen_wind_y
+ if (schnee) menge,fall,wx,wy=schnee_menge,schnee_fall,schnee_wind_x,schnee_wind_y
+ local kvx,kvy=0,0
+ if (kx_alt) kvx,kvy=kx-kx_alt,ky-ky_alt
+ kx_alt,ky_alt=kx,ky
+ for n=1,menge do
+  if #regen<regen_max then
+   local l=fall*(0.8+rnd(0.4))
+   local x=kx+rnd(128)+kvx*l
+   local y=ky+rnd(128)+kvy*l
+   add(regen,{x=x-wx*l,y=y-wy*l,l=l,wx=wx,wy=wy})
+  end
+ end
+ for r in all(regen) do
+  if r.s then
+   r.s-=1
+   if (r.s<=0) del(regen,r)
+  else
+   r.x+=r.wx r.y+=r.wy
+   r.l-=1
+   if r.l<=0 then
+    if not schnee and boden(r.x,r.y)==b_strasse then
+     r.s=regen_spritz
+    else
+     del(regen,r)
+    end
+   end
+  end
+ end
+end
+
+function draw_regen()
+ local c=opt.strasse==3 and schnee_farbe or regen_farbe
+ for r in all(regen) do
+  pset(r.x,r.y,r.s and 7 or c)
+ end
+end
+
 function update_gischt()
  for g in all(gischt) do
   g.x+=g.vx g.y+=g.vy
@@ -1035,7 +1113,7 @@ function spur_stempeln(t)
   local b=boden(x,y)
   if b==b_strasse or b==b_gras then
    spx[spi],spy[spi]=flr(x),flr(y)
-   spc[spi]=b==b_strasse and belag_spur[opt.strasse] or 3
+   spc[spi]=b==b_strasse and belag_spur[opt.strasse] or gras_spur[opt.strasse]
    spi=spi%spur_max+1
    spn=min(spn+1,spur_max)
   end
@@ -1050,21 +1128,26 @@ end
 
 -- test: ideallinie und ziel
 -- von blau
-function draw_linie()
+-- ideallinie um das auto herum:
+-- fuer alle in spurfarbe, zum
+-- testen orange mit punkten und
+-- dem ziel von blau
+function draw_linie(test)
  local n=#kurs
  local t=auto
+ local c=test and 9 or belag_spur[opt.strasse]
  for s=-6,10 do
   local i=(t.nxt-1+s)%n+1
   local ax,ay=linie_punkt(i,0,t.x,t.y)
   for u=1,4 do
    local bx,by=linie_punkt(i,u/4,t.x,t.y)
-   line(ax,ay,bx,by,9)
+   line(ax,ay,bx,by,c)
    ax,ay=bx,by
   end
-  pset(t.x+welt_dx(linie_x[i]-t.x),t.y+welt_dy(linie_y[i]-t.y),8)
+  if (test) pset(t.x+welt_dx(linie_x[i]-t.x),t.y+welt_dy(linie_y[i]-t.y),8)
  end
- local c=nur_blau and auto or gegner
- if (c and c.zx) circ(c.zx,c.zy,1,8)
+ local z=nur_blau and auto or gegner
+ if (test and z and z.zx) circ(z.zx,z.zy,1,8)
 end
 -->8
 -- welt, technik, helfer
@@ -1254,6 +1337,10 @@ function welt_rum(t)
  for g in all(gischt) do
   g.x+=dx g.y+=dy
  end
+ for r in all(regen) do
+  r.x+=dx r.y+=dy
+ end
+ if (kx_alt) kx_alt+=dx ky_alt+=dy
 end
 
 -- untergrund an welt-pos: pixel
@@ -1333,6 +1420,7 @@ end
 function puffer_nach(cx,cy)
  camera()
  pal(6,belag_farbe[opt.strasse])
+ pal(11,gras_farbe[opt.strasse])
  if puffer_voll or abs(cx-pkx)>=128 or abs(cy-pky)>=128 then
   for wy=cy,cy+127 do puffer_zeile(cx,wy) end
   puffer_voll=false
@@ -1343,7 +1431,7 @@ function puffer_nach(cx,cy)
   for wy=cy,pky-1 do puffer_zeile(cx,wy) end
  end
  pkx,pky=cx,cy
- pal(6,6)
+ pal(6,6) pal(11,11)
 end
 
 -- puffer auf den schirm, je

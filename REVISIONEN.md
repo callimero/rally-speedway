@@ -190,3 +190,53 @@ Programmstruktur steht in [`STRUKTUR.md`](STRUKTUR.md).
 (Versuche mit besserem Bremsen für Blau bei Nässe und Eis, geglätteter
 Anzeige und Temperament im Zweikampf liegen in `rally_versuch_blau.p8`; sie
 sind vorerst nicht übernommen.)
+
+## Regen (2026-10-21)
+
+- **Regen bei nasser Straße:** Hellblaue Tropfen fallen etwa 1 s
+  (`regen_fall`). Der Wind aus Nordwest treibt sie nach Südosten
+  (`regen_wind_x/y`).
+  - **Landepunkt:** Er liegt dort, wo die Kamera nach der Fallzeit sein
+    wird. Beim Fahren kommen die Tropfen dadurch aus der Fahrtrichtung.
+  - **Aufschlag:** Auf der Straße wird der Tropfen für `regen_spritz`
+    Frames ein fester weißer Pixel, sonst verschwindet er.
+  - **Kosten:** etwa 9 % CPU (`regen_menge` 3 je Frame, bis `regen_max`
+    300).
+- **Winter bei Eis:** Die vereiste Straße war hellblau, also genauso wie das
+  blaue Auto. Jetzt bleibt die Straße grau, die Wiese wird weiß
+  (`gras_farbe`, beim Zeichnen in den Welt-Puffer umgefärbt; die Physik
+  bleibt gleich), und Reifenspuren im Schnee sind grau (`gras_spur`).
+  Dazu fällt Schnee: wie der Regen, aber langsamer und ohne Aufschlag
+  (`schnee_*`).
+
+## Versuch: Blau bremst nach Haftung (2026-10-21, wieder entfernt)
+
+- **Kurventempo physikalisch:** Blau misst die Krümmung der Ideallinie über
+  die nächsten 3 Felder (Drehung je Pixel). Daraus ergibt sich zusammen mit
+  der Haftung des Belags die Haftgrenze `v = sqrt(grip / Krümmung)`, mal
+  `gegner_mut`. Damit sind Straßenzustand und Endgeschwindigkeit
+  automatisch berücksichtigt. `gegner_kurve` ist dadurch entfallen.
+- **Rutschen:** Ab einer Querbewegung von `gegner_rutsch` bremst Blau.
+- **Testreihe** (Blau allein, Strecken 1 und 5, trocken/nass/Eis, 80 und
+  120 mph): Mit `gegner_mut=0.8` gab es keinen einzigen Crash, bei 1.0 und
+  1.2 auf Nässe/Eis mit 120 mph 1–4. Trocken ist Blau etwa 2 % langsamer
+  als vorher.
+- **Wieder entfernt:** Im Spiel wirkte es unrund. Blau bremste viel zu weit
+  vor der Kurve, lenkte ein, bremste erneut, stand quer mit Tempo 0 und
+  konnte nicht driften. Die Testreihe hatte nur Crashs gezählt, nicht das
+  Fahrgefühl. Blau fährt wieder wie vorher (`gegner_kurve`).
+
+## Einstellungen sortiert (2026-10-21)
+
+Tab 0 ist jetzt so aufgebaut: Spieler (Gelb), Blau, Menü (Tempo-, Beschleunigungs-
+und Haftungswerte, Startwerte), Umgebung (Gelände, Beläge, Regen, Schnee),
+Kamera + Unfall, Effekte + Ton, Testen. Die Werte sind unverändert.
+
+## Ideallinie für alle, Kurvenbremse je Belag (2026-10-21)
+
+- **Feinschliff von callimero:** `gegner_brems` 0.023, `rempel_stoss` 0.2,
+  Testschalter weiter nach oben.
+- **`gegner_kurve` je Belag** (trocken/nass/eis), zunächst überall 0.4.
+- **Menüpunkt „ideallinie“** (aus/an): Die Linie wird ohne Punkte in der
+  Farbe der Bremsspuren gezeichnet, unter den Autos. Die Testansicht mit
+  `zeige_linie` (orange, mit Punkten und Blaus Ziel) gibt es weiterhin.

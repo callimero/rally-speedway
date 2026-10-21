@@ -31,14 +31,17 @@ Werkzeuge und ausgelesene C64-Daten bleiben lokal.
 
 ### Tab 0 – Einstellungen
 
-Geordnet nach Wichtigkeit fürs Spielgefühl:
+Geordnet so, dass das Wichtigste vorn steht:
 
-1. **Spielgefühl**: Tempo/Beschleunigung/Bremse, Haftung, Lenkung, Gelände
-   (Gras, Wasser, Busch, Aquaplaning), Blau, Rempeln, Kamera, Unfall
-2. **Optik + Ton**: Farben, Spuren, Spritzwasser, Rauch, Motorton
-3. **Menü-Startwerte** (`start_wahl`, inkl. Rundenzahl gegen Blau)
-4. **Testen**: `zeige_linie` (Ideallinie einzeichnen), `nur_blau` (nur der
-   Computer fährt, Kamera folgt ihm)
+1. **Spieler (Gelb)**: Bremse, Rutschen, Lenkung
+2. **Blau (Gegner)**: Tempo, Gummiband, Kurven, Lenken, Rempeln
+3. **Menü**: Tempo-, Beschleunigungs- und Haftungswerte je Auswahl,
+   Startwerte (`start_wahl`)
+4. **Umgebung**: Gelände (Gras, Wasser, Busch, Aquaplaning), Farben je
+   Belag, Regen (nass), Schnee (Eis)
+5. **Kamera + Unfall**
+6. **Effekte + Ton**: Farben der Fahrer, Spuren, Spritzwasser, Rauch, Motor
+7. **Testen**: `zeige_linie`, `nur_blau`
 
 Geschwindigkeiten sind in Pixel pro Frame (60 Frames/s). Alles, was „Anteil“
 heißt, ist ein Faktor auf die Höchstgeschwindigkeit bzw. die Haftung.
