@@ -40,8 +40,10 @@ Geordnet so, dass das Wichtigste vorn steht:
 4. **Umgebung**: Gelände (Gras, Wasser, Busch, Aquaplaning), Farben je
    Belag, Regen (nass), Schnee (Eis)
 5. **Kamera + Unfall**
-6. **Effekte + Ton**: Farben der Fahrer, Spuren, Spritzwasser, Rauch, Motor
-7. **Testen**: `zeige_linie`, `nur_blau`
+6. **Testen**: `zeige_linie`, `nur_blau` (steht hinter Blau)
+
+Effekt-Werte (Rauch, Spuren, Farben, Motorton) stehen fest im Code, siehe
+„Fest eingebaute Werte“.
 
 Geschwindigkeiten sind in Pixel pro Frame (60 Frames/s). Alles, was „Anteil“
 heißt, ist ein Faktor auf die Höchstgeschwindigkeit bzw. die Haftung.
@@ -57,6 +59,41 @@ Zeilen zusammengefasst) stimmten zwar die Proportionen, aber Details wie Kopf,
 Arme, Räder und die Randsteine an Schrägen gingen verloren. Die Werkzeuge
 liefern deshalb nur Vorlagen; `original.py` überschreibt die gemalten Sprites
 nicht.
+
+## Fest eingebaute Werte
+
+Diese Einstellungen waren seit ihrer Einführung unverändert und betreffen
+nicht das Fahrgefühl. Damit sie keine Tokens kosten (je etwa 3), stehen sie
+seit 2026-10-22 direkt im Code. Wer einen ändern will, sucht in der genannten
+Funktion nach dem Wert.
+
+| Früher | Wert | Steht in | Bedeutung |
+|---|---|---|---|
+| `rauch_auto` | `0.35` | `update_unfall` | Chance je Frame auf eine Rauchwolke über dem brennenden Auto |
+| `rauch_fahrer` | `0.2` | `update_unfall` | dasselbe über dem brennenden Fahrer |
+| `rauch_steig` | `0.25` | `neuer_rauch` | Steiggeschwindigkeit (px/Frame) |
+| `rauch_wind` | `0.12` | `update_rauch` | seitliche Drift (px/Frame) |
+| `rauch_wachs` | `0.04` | `update_rauch` | Wachstum des Radius je Frame |
+| `rauch_gross` | `3.5` | `update_rauch` | größter Radius |
+| `rauch_dauer` | `70` | `neuer_rauch` | Lebensdauer in Frames |
+| `rauch_max` | `60` | `neuer_rauch` | höchstens so viele Wolken |
+| `spur_max` | `600` | `init_spur, spur_stempeln` | Länge des Ringpuffers der Bremsspuren |
+| `gischt_max` | `80` | `spritzen` | höchstens so viele Spritzwasser-Pixel |
+| `regen_max` | `300` | `update_regen` | höchstens so viele Regentropfen/Flocken |
+| `rempel_pause` | `20` | `rempeln` | Frames zwischen zwei Rempel-Knallen |
+| `feuer_tempo` | `5` | `draw_wagen` | Frames je Feuer-Bild |
+| `fahrer_tempo` | `7` | `update_unfall, im_ziel` | Frames je Fahrer-Bild |
+| `unfall_nach` | `30` | `pruefe_unfall` | Wartezeit nach der Fahrer-Animation bis zum Neustart |
+| `fahrer_farbe` | `7` | `draw_fahrer` | Farbe für Haut/Helm (Farbe 7 im Sprite) |
+| `overall_gelb` | `10` | `draw_wagen` | Overall-Farbe des gelben Fahrers (Farbe 12 im Sprite wird ersetzt) |
+| `gegner_farbe` | `12` | `draw_menue, draw_wagen, gegner_pfeil` | Farbe von Blau (ersetzt Gelb 10) |
+| `kam_rand` | `14` | `update_kamera` | Mindestabstand des Autos zum Bildrand (px) |
+| `bremsspur_ab` | `0.5` | `update_auto` | Bremsspur beim Bremsen erst ab diesem Tempo |
+| `gischt_menge` | `0.5` | `spritzen` | Chance je Frame und Rad auf Spritzwasser |
+| `regen_spritz` | `6` | `update_regen` | Frames, die ein Regentropfen nach dem Aufschlag weiß bleibt |
+| `motor_min` | `3` | `update_ton` | Tonhöhe des Motors im Stand |
+| `motor_max` | `32` | `update_ton` | Tonhöhe bei Höchsttempo |
+| `motor_kurve` | `0.7` | `update_ton` | Kurve der Tonhöhe (<1: erst schnell, dann flacher) |
 
 ## Ablauf
 
@@ -216,6 +253,9 @@ angehängt (z. B. Autopilot über `ki_eingabe`, Bildschirm per `printh` als
 Hex), dann `pico8 -x test.p8`.
 
 ## Grenzen
+
+- **Tokens** (8192): `python3 tokens.py rally.p8` zählt wie PICO-8 (mit
+  `--funk` je Funktion). Stand 2026-10-22: etwa 6940 benutzt.
 
 - **Komprimierter Code** (15 616 Byte): Kommentare zählen mit. Deshalb liegen
   die Streckendaten im SFX-Speicher. Nach größeren Änderungen den Export

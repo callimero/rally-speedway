@@ -46,7 +46,6 @@ gegner_brems=0.023 -- bremst ab
                 -- dieser abweichung
 rempel_abstand=7 -- px
 rempel_stoss=0.2 -- abprall
-rempel_pause=20 -- frames je knall
 
 --== testen ==
 zeige_linie=false -- ideallinie
@@ -100,9 +99,7 @@ regen_menge=3   -- tropfen/frame
 regen_fall=60   -- fallzeit frames
 regen_wind_x=0.4 -- wind aus nord-
 regen_wind_y=0.3 -- west (px/frame)
-regen_spritz=6  -- frames weiss
 regen_farbe=12  -- fallender tropfen
-regen_max=300
 -- schnee (eis): wie regen, faellt
 -- langsamer, kein aufschlag
 schnee_menge=2
@@ -116,37 +113,10 @@ schnee_farbe=7
 kam_folgen=0.05 -- 1 = starr
 kam_vorschau=40 -- frames voraus
                 -- (0 = original)
-kam_rand=14     -- abstand zum rand
 brenn_ab=0.7    -- anteil vmax: ab
                 -- da brennt fahrer
-fahrer_tempo=7  -- frames je bild
-feuer_tempo=5   -- frames je bild
-unfall_nach=30  -- frames bis neu
 ziel_winken=120 -- frames winken,
                 -- dann auswertung
-
---== effekte + ton ==
-
-gegner_farbe=12 -- blau statt gelb
-overall_gelb=10 -- overall gelb
-                -- (sprite: 12)
-fahrer_farbe=7  -- haut/helm
-bremsspur_ab=0.5 -- beim bremsen
-spur_max=600    -- spurpunkte
-gischt_menge=0.5 -- spritzwasser
-gischt_max=80
-rauch_auto=0.35 -- chance/frame
-rauch_fahrer=0.2
-rauch_steig=0.25
-rauch_wind=0.12
-rauch_wachs=0.04
-rauch_gross=3.5
-rauch_dauer=70
-rauch_max=60
-motor_min=3     -- tonhoehe stand
-motor_max=32    -- ... bei vmax
-motor_kurve=0.7 -- <1: erst schnell
-
 
 --== ende einstellungen ==
 
@@ -261,7 +231,7 @@ function draw_menue()
  print("\^w\^trally",26,5,0)
  print("\^w\^trally",25,4,10)
  print("speedway",71,8,0)
- pal(10,gegner_farbe)
+ pal(10,12)
  draw_auto(menue_bild%152-12,10,0.25)
  pal(10,10)
  -- scrollliste: menue_zeilen
@@ -552,7 +522,7 @@ function update_auto(t,turn,brems)
  -- gas automatisch, knopf bremst
  t.bremst=false
  if brems then
-  t.bremst=v>bremsspur_ab
+  t.bremst=v>0.5
   v=v>0 and max(v-bremse,0) or min(v+bremse,0)
  elseif v<vm then
   v=min(v+beschl,vm)
@@ -590,7 +560,7 @@ function pruefe_unfall(t)
   local b=boden(x,y)
   if b==b_fest or b==b_busch and sp>busch_crash then
    t.unfall=1
-   t.nach=unfall_nach
+   t.nach=30
    t.vx,t.vy,t.v,t.vq=0,0,0,0
    t.rutscht=false
    return sp
@@ -611,15 +581,15 @@ end
 
 function update_unfall(t)
  t.unfall+=1
- if (rnd()<rauch_auto) neuer_rauch(t.x,t.y-3)
+ if (rnd()<0.35) neuer_rauch(t.x,t.y-3)
  local f=t.fahrer
- if fahrer_brennt[f.folge[min(f.i,#f.folge)]]
- and rnd()<rauch_fahrer then
+ if f.folge[min(f.i,#f.folge)]>=10
+ and rnd()<0.2 then
   neuer_rauch(f.x,f.y-3)
  end
  if f.i<=#f.folge then
   f.z+=1
-  if f.z>=fahrer_tempo then
+  if f.z>=7 then
    f.z=0
    f.x+=fahrer_weg[f.folge[f.i]]*f.dir
    f.i+=1
@@ -693,7 +663,7 @@ function im_ziel(t)
   end
  else
   f.z+=1
-  if f.z>=fahrer_tempo then
+  if f.z>=7 then
    f.z=0
    f.i=f.i%#f.folge+1
   end
@@ -712,8 +682,8 @@ function update_kamera(t)
  local zy=t.y+t.vy*kam_vorschau-64
  kx+=(zx-kx)*kam_folgen
  ky+=(zy-ky)*kam_folgen
- kx=mid(t.x-128+kam_rand,kx,t.x-kam_rand)
- ky=mid(t.y-128+kam_rand,ky,t.y-kam_rand)
+ kx=mid(t.x-128+14,kx,t.x-14)
+ ky=mid(t.y-128+14,ky,t.y-14)
 end
 
 function update_ton(t)
@@ -724,7 +694,7 @@ function update_ton(t)
   motor_an=an
   sfx(an and 0 or -1,0)
  end
- local p=motor_min+(motor_max-motor_min)*mid(0,abs(t.v)/vmax,1)^motor_kurve
+ local p=3+(32-3)*mid(0,abs(t.v)/vmax,1)^0.7
  motor_ton(flr(p))
  local q=t.rutscht and t.unfall==0
  if q!=quietscht then
@@ -764,23 +734,23 @@ end
 -- auto, beim crash mit feuer
 -- und fahrer
 function draw_wagen(t,x,y,blau)
- if (blau) pal(10,gegner_farbe)
+ if (blau) pal(10,12)
  draw_auto(x,y,t.k/32)
  pal(10,10)
  if t.unfall>0 then
   palt(0,false) palt(15,true)
-  spr(feuer_spr+t.unfall\feuer_tempo%3,flr(x)-4,flr(y)-4)
+  spr(feuer_spr+t.unfall\5%3,flr(x)-4,flr(y)-4)
   palt()
-  draw_fahrer(t.fahrer,not blau and overall_gelb)
+  draw_fahrer(t.fahrer,not blau and 10)
  elseif t.fertig and t.fahrer then
-  draw_fahrer(t.fahrer,not blau and overall_gelb)
+  draw_fahrer(t.fahrer,not blau and 10)
  end
 end
 
 function draw_fahrer(f,overall)
  local n=f.folge[min(f.i,#f.folge)]
  palt(0,false) palt(15,true)
- pal(7,fahrer_farbe)
+ pal(7,7)
  pal(12,overall or 12)
  spr(fahrer_spr[n],flr(f.x)-4,flr(f.y)-4,1,1,f.dir<0)
  pal(7,7) pal(12,12) palt()
@@ -931,7 +901,7 @@ function rempeln(a,b)
   b.vy+=(va-vb)*ny+ny*rempel_stoss
   if t()>(rempel_t or 0) then
    sfx(4,3)
-   rempel_t=t()+rempel_pause/60
+   rempel_t=t()+20/60
   end
  end
 end
@@ -943,7 +913,7 @@ function gegner_pfeil(g,cx,cy)
  if (x>=0 and x<128 and y>=0 and y<128) return
  local px,py=mid(3,x,124),mid(11,y,110)
  circfill(px,py,2,0)
- circfill(px,py,1,gegner_farbe)
+ circfill(px,py,1,12)
 end
 
 -- ====== rennende ======
@@ -990,20 +960,20 @@ end
 
 -- rauch: steigt, treibt, waechst
 function neuer_rauch(x,y)
- if (#rauch>=rauch_max) return
+ if (#rauch>=60) return
  add(rauch,{x=x+rnd(4)-2,y=y,
   vx=rnd(0.2)-0.1,
-  vy=-rauch_steig*(0.7+rnd(0.6)),
+  vy=-0.25*(0.7+rnd(0.6)),
   r=0.5,l=0,
-  dauer=rauch_dauer*(0.7+rnd(0.6))})
+  dauer=70*(0.7+rnd(0.6))})
 end
 
 function update_rauch()
  for r in all(rauch) do
-  r.vx+=(rauch_wind-r.vx)*0.03
+  r.vx+=(0.12-r.vx)*0.03
   r.vy*=0.99
   r.x+=r.vx r.y+=r.vy
-  r.r=min(r.r+rauch_wachs,rauch_gross)
+  r.r=min(r.r+0.04,3.5)
   r.l+=1
   if (r.l>=r.dauer) del(rauch,r)
  end
@@ -1028,8 +998,8 @@ function spritzen(t,ub,m)
  local sp=sqrt(t.vx^2+t.vy^2)
  if (sp<0.3) return
  for e in all(spur_raeder) do
-  if #gischt<gischt_max
-  and rnd()<gischt_menge*(m or 1)*sp/vmax then
+  if #gischt<80
+  and rnd()<0.5*(m or 1)*sp/vmax then
    local x,y=welt_punkt(t,e[1],e[2]+1)
    if boden(x,y)==ub then
     add(gischt,{x=x,y=y,z=0,
@@ -1058,7 +1028,7 @@ function update_regen()
  if (kx_alt) kvx,kvy=kx-kx_alt,ky-ky_alt
  kx_alt,ky_alt=kx,ky
  for n=1,menge do
-  if #regen<regen_max then
+  if #regen<300 then
    local l=fall*(0.8+rnd(0.4))
    local x=kx+rnd(128)+kvx*l
    local y=ky+rnd(128)+kvy*l
@@ -1074,7 +1044,7 @@ function update_regen()
    r.l-=1
    if r.l<=0 then
     if not schnee and boden(r.x,r.y)==b_strasse then
-     r.s=regen_spritz
+     r.s=6
     else
      del(regen,r)
     end
@@ -1117,8 +1087,8 @@ function spur_stempeln(t)
   if b==b_strasse or b==b_gras then
    spx[spi],spy[spi]=flr(x),flr(y)
    spc[spi]=b==b_strasse and belag_spur[opt.strasse] or gras_spur[opt.strasse]
-   spi=spi%spur_max+1
-   spn=min(spn+1,spur_max)
+   spi=spi%600+1
+   spn=min(spn+1,600)
   end
  end
 end
@@ -1162,22 +1132,15 @@ end
 -- und 120-126, sonst c64-zeichen
 richt_spr={[0]=64,66,68,70,72,74,76,78,96}
 feuer_spr=98
--- fahrer: c64-bildnummer ->
--- sprite (laeuft nach rechts)
-fahrer_spr={[4]=104,[5]=105,
- [2]=106,[3]=107,[6]=108,
- [10]=109,[11]=110,[13]=111,
- [14]=120,[15]=121,[16]=122,
- [17]=123,[18]=124,[19]=125,
- [20]=126}
-fahrer_weg={[4]=2,[5]=2,[2]=0,
- [3]=0,[6]=3,[10]=2,[11]=2,
- [13]=3,[14]=1,[15]=1,[16]=1,
- [17]=1,[18]=1,[19]=1,[20]=1}
-fahrer_brennt={[10]=true,[11]=true,
- [13]=true,[14]=true,[15]=true,
- [16]=true,[17]=true,[18]=true,
- [19]=true,[20]=true}
+-- fahrer (laeuft nach rechts):
+-- je c64-bild sprite, weg (px).
+-- bilder ab 10: er brennt
+fahrer_spr,fahrer_weg={},{}
+local d=split("2,106,0,3,107,0,4,104,2,5,105,2,6,108,3,10,109,2,11,110,2,13,111,3,14,120,1,15,121,1,16,122,1,17,123,1,18,124,1,19,125,1,20,126,1")
+for i=1,#d,3 do
+ fahrer_spr[d[i]]=d[i+1]
+ fahrer_weg[d[i]]=d[i+2]
+end
 -- folgen aus dem c64-code
 folge_lauf=split("4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5,2,3,2,3,2,3,2,3,2,3,2,3")
 folge_wink=split("2,3")
@@ -1334,14 +1297,10 @@ function welt_rum(t)
  for i=1,spn do
   spx[i]+=dx spy[i]+=dy
  end
- for r in all(rauch) do
-  r.x+=dx r.y+=dy
- end
- for g in all(gischt) do
-  g.x+=dx g.y+=dy
- end
- for r in all(regen) do
-  r.x+=dx r.y+=dy
+ for l in all({rauch,gischt,regen}) do
+  for r in all(l) do
+   r.x+=dx r.y+=dy
+  end
  end
  if (kx_alt) kx_alt+=dx ky_alt+=dy
 end

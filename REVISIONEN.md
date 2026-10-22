@@ -248,3 +248,13 @@ Kamera + Unfall, Effekte + Ton, Testen. Die Werte sind unverändert.
 - **Sicherung als v6:** Regen, Schnee, Ideallinie im Menü, Kurvenbremse
   von Blau je Belag, sortierte Einstellungen, Fehlerkorrekturen bei
   Fortschritt und Zielabstand.
+
+## Token-Diät, Stufe 1 (2026-10-22)
+
+- **Zählskript** `tokens.py` (rechnet wie PICO-8).
+- **25 unveränderte Effekt- und Technikwerte** stehen jetzt direkt im Code
+  (Liste mit Fundstelle in `STRUKTUR.md`, „Fest eingebaute Werte“).
+- **Fahrer-Tabellen** als ein String; „brennt“ heißt jetzt einfach Bild ab 10.
+- **`welt_rum`** verschiebt Rauch, Spritzwasser und Regen in einer Schleife.
+- **Ergebnis:** 7161 → 6936 Tokens (225 gespart). Das Verhalten ist
+  unverändert (gleiche Rundenzeiten im Testrennen).
