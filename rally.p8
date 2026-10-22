@@ -95,6 +95,9 @@ belag_spur={5,5,13}   -- spuren
 gras_farbe={11,11,7} -- wiese
                 -- (eis: schnee)
 gras_spur={3,3,6} -- spuren darauf
+busch_licht={4,4,7} -- helles gruen
+                -- der buesche
+                -- (eis: schnee)
 -- regen (nass)
 regen_menge=3   -- tropfen/frame
 regen_fall=60   -- fallzeit frames
@@ -1424,6 +1427,7 @@ function puffer_nach(cx,cy)
  camera()
  pal(6,belag_farbe[opt.strasse])
  pal(11,gras_farbe[opt.strasse])
+ pal(4,busch_licht[opt.strasse])
  if puffer_voll or abs(cx-pkx)>=128 or abs(cy-pky)>=128 then
   for wy=cy,cy+127 do puffer_zeile(cx,wy) end
   puffer_voll=false
@@ -1434,7 +1438,7 @@ function puffer_nach(cx,cy)
   for wy=cy,pky-1 do puffer_zeile(cx,wy) end
  end
  pkx,pky=cx,cy
- pal(6,6) pal(11,11)
+ pal(6,6) pal(11,11) pal(4,4)
 end
 
 -- puffer auf den schirm, je

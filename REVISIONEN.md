@@ -240,3 +240,11 @@ Kamera + Unfall, Effekte + Ton, Testen. Die Werte sind unverändert.
 - **Menüpunkt „ideallinie“** (aus/an): Die Linie wird ohne Punkte in der
   Farbe der Bremsspuren gezeichnet, unter den Autos. Die Testansicht mit
   `zeige_linie` (orange, mit Punkten und Blaus Ziel) gibt es weiterhin.
+
+## v6 – `rally_v6.p8` (2026-10-22)
+
+- **Winter:** Bei Eis wird auch das helle Grün der Büsche weiß, wie Schnee
+  auf den Büschen (`busch_licht`).
+- **Sicherung als v6:** Regen, Schnee, Ideallinie im Menü, Kurvenbremse
+  von Blau je Belag, sortierte Einstellungen, Fehlerkorrekturen bei
+  Fortschritt und Zielabstand.
