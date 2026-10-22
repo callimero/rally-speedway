@@ -46,7 +46,7 @@ gegner_max=1.04
 --  brems: bremst ab abweichung
 profil={
  {blick=24,kurve={0.2,0.4,0.6},toleranz=0.008,brems=0.03},
- {blick=24,kurve={0.2,0.4,0.6},toleranz=0.008,brems=0.03},
+ {blick=44,kurve={0.2,0.4,0.6},toleranz=0.008,brems=0.03},
 }
 rempel_abstand=7 -- px
 rempel_stoss=0.2 -- abprall
@@ -57,6 +57,12 @@ rempel_stoss=0.2 -- abprall
 -- sonst bleibt er dahinter
 ueberhol_abstand=30 -- px
 ueberhol_versatz=8 -- px seitlich
+-- windschatten suchen: auf der
+-- geraden faehrt der computer
+-- hinter das andere auto, vor
+-- einer kurve (drehung der linie
+-- ueber ki_gerade) schert er aus
+ki_gerade=0.06
 
 --== windschatten (beide) ==
 windschatten_laenge=40 -- px ab
@@ -65,7 +71,10 @@ windschatten_breite=8 -- px quer
                 -- bis ganz draussen
 windschatten_max=0.2 -- +20% tempo
                 -- direkt am heck
-hinten_bonus=0.1 -- +10% tempo fuer
+-- motor des anderen autos
+ton2_tiefer=3   -- halbtoene
+ton2_weite=128  -- px: ab da still
+hinten_bonus=0.2 -- +10% tempo fuer
                 -- den, der hinten
                 -- liegt (beide)
 
@@ -208,7 +217,7 @@ menue={
 
 function zum_menue()
  modus="menue"
- sfx(-1,0) sfx(-1,1)
+ sfx(-1,0) sfx(-1,1) sfx(-1,3)
  menue_zeile=2
  menue_oben=1
  menue_bild=0
@@ -424,10 +433,9 @@ function neues_rennen()
  regen={}
  kx_alt,ky_alt=nil,nil
  quietscht=false
- motor_an=false
  sieger=nil
  ziel_t=nil
- sfx(-1,0) sfx(-1,1)
+ sfx(-1,0) sfx(-1,1) sfx(-1,3)
 end
 
 -- ein auto (gelb oder blau):
@@ -469,6 +477,7 @@ function update_rennen()
   if rennzeit>30 then
    if btnp(4) then
     auto,gegner=gegner,auto
+    auto.motor,gegner.motor=nil
     puffer_voll=true
    elseif btnp()>0 then
     zum_menue()
@@ -739,15 +748,11 @@ function update_kamera(t)
 end
 
 function update_ton(t)
- -- motor aus, solange er brennt
- -- oder ausgestiegen ist
- local an=gestartet and t.unfall==0 and not (t.fertig and t.fahrer)
- if an!=motor_an then
-  motor_an=an
-  sfx(an and 0 or -1,0)
- end
- local p=3+(32-3)*mid(0,abs(t.v)/vmax,1)^0.7
- motor_ton(flr(p))
+ motor(t,0,0,1)
+ -- anderes auto: tiefer, leiser
+ -- mit dem abstand
+ local g=gegner
+ if (g) motor(g,5,3,1-mid(0,abs(g.x-t.x)+abs(g.y-t.y),ton2_weite)/ton2_weite,ton2_tiefer)
  local q=t.rutscht and t.unfall==0
  if q!=quietscht then
   quietscht=q
@@ -886,16 +891,28 @@ function ki_eingabe(g)
    z=pts[k] break
   end
  end
+ -- drehung der linie ueber die
+ -- naechsten 3 felder
+ local dreh,ra=0
+ for s=0,3 do
+  local i=(g.nxt-2+s)%n+1
+  local j=i%n+1
+  local r=richtung(0,0,welt_dx(linie_x[j]-linie_x[i]),welt_dy(linie_y[j]-linie_y[i]))
+  if (ra) dreh+=abs((r-ra+0.5)%1-0.5)
+  ra=r
+ end
  -- anderes auto vorn auf der
  -- linie: seitlich vorbei, wo
  -- strasse ist, sonst dahinter
- -- bleiben
+ -- bleiben. auf der geraden im
+ -- windschatten erst dahinter
  local o,halt=g==auto and gegner or auto
  if o and o.unfall==0 then
   local dx,dy=welt_dx(o.x-g.x),welt_dy(o.y-g.y)
   local fx,fy=-sin(g.a),-cos(g.a)
   local vor,q=dx*fx+dy*fy,dy*fx-dx*fy
-  if vor>-rempel_abstand and vor<ueberhol_abstand and abs(q)<ueberhol_versatz*1.5 then
+  local ws=vor>0 and vor<rempel_abstand+windschatten_laenge
+  if vor>-rempel_abstand and (vor<ueberhol_abstand or ws and dreh>ki_gerade) and abs(q)<ueberhol_versatz*1.5 then
    local s,frei=g.seite or q>0 and -1 or 1
    for k=1,2 do
     local x,y=z[1]-fy*s*ueberhol_versatz,z[2]+fx*s*ueberhol_versatz
@@ -908,22 +925,13 @@ function ki_eingabe(g)
    halt=not frei and vor>0 and g.v>o.v
   else
    g.seite=nil
+   if (ws and abs(q)<windschatten_breite*2 and boden(g.x+dx/2,g.y+dy/2)==b_strasse) z={g.x+dx,g.y+dy}
   end
  end
  g.zx,g.zy=z[1],z[2]
  local w=(richtung(g.x,g.y,z[1],z[2])-g.a+0.5)%1-0.5
  local tol=p.toleranz
  local turn=w<-tol and -1 or w>tol and 1 or 0
- -- drehung der linie ueber die
- -- naechsten 3 felder
- local dreh,ra=0
- for s=0,3 do
-  local i=(g.nxt-2+s)%n+1
-  local j=i%n+1
-  local r=richtung(0,0,welt_dx(linie_x[j]-linie_x[i]),welt_dy(linie_y[j]-linie_y[i]))
-  if (ra) dreh+=abs((r-ra+0.5)%1-0.5)
-  ra=r
- end
  local vz=g.vmax*max(0.35,1-dreh*p.kurve[opt.strasse])
  return turn,halt or g.v>vz or abs(w)>p.brems and g.v>g.vmax*0.5
 end
@@ -996,7 +1004,7 @@ function rempeln(a,b)
   b.vx+=(va-vb)*nx+nx*rempel_stoss
   b.vy+=(va-vb)*ny+ny*rempel_stoss
   if t()>(rempel_t or 0) then
-   sfx(4,3)
+   sfx(4,2)
    rempel_t=t()+20/60
   end
  end
@@ -1046,7 +1054,7 @@ function rennen_ende()
  modus="ergebnis"
  ergebnis_t=0
  schreibe_log()
- sfx(-1,0) sfx(-1,1)
+ sfx(-1,0) sfx(-1,1) sfx(-1,3)
  sfx(3,2)
 end
 
@@ -1585,10 +1593,25 @@ end
 
 -- motor: tonhoehe der noten 0+1
 -- von sfx 0 live aendern
-function motor_ton(p)
+-- motor eines autos: sfx s (eine
+-- kopie von sfx 0) auf kanal k,
+-- lautstaerke l (0..1), d halb-
+-- toene tiefer, tonhoehe aus dem
+-- tempo. aus, solange er brennt
+-- oder ausgestiegen ist
+function motor(t,s,k,l,d)
+ local an=gestartet and t.unfall==0 and not (t.fertig and t.fahrer)
+ if an!=t.motor then
+  t.motor=an
+  sfx(an and s or -1,k)
+ end
+ local p=flr(3+29*mid(0,abs(t.v)/vmax,1)^0.7)-(d or 0)
+ local a=0x3200+s*68
+ memcpy(a,0x3200,68)
  for n=0,1 do
-  local ad=0x3200+n*2
-  poke(ad,peek(ad)&0xc0|p)
+  local ad=a+n*2
+  poke(ad,peek(ad)&0xc0|max(p,0))
+  poke(ad+1,peek(ad+1)&0xf1|(peek(ad+1)\2&7)*l\1*2)
  end
 end
 
@@ -1909,7 +1932,7 @@ e0e1e0e1e0e1e0e1e0e1e0e1e0e102020202020202020202020202020202020202161eeced01eced
 020202020202020202020222010101010101011102020202020202020202020a090202020202020202020202e40101010202141c01010101010101011b130202020202020202020202020202020202020101010101010101010101010101f2f3010101eaefefed010101f8f6f7f901010101010101010101f433f6f6f3010101
 __sfx__
 000100020c13010620000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-000200042e22232222302223312200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000200042e21232222302123322200200002000020000200002000020000200002000020000200002000020000200002000020000200002000020000200002000020000200002000020000200002000020000200
 0005000016670186701c6701b6601a660196601865017650166501564014640136401263011630106300f6200e6200d6200c6400d650096300562001610016000160001600006000060000600006000060000000
 000600002d0502d0502d0500000039055390553905539055000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 000200001866014650106300c62000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
