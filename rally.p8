@@ -32,10 +32,10 @@ lenk_rueck=0.05 -- einschlag zurueck
 
 --== blau (gegner) ==
 
-gegner_tempo=0.98 -- grundtempo
+gegner_tempo=1.0 -- grundtempo
 gegner_anpassen=0.025 -- gummi-
                 -- band je feld
-gegner_min=0.85 -- tempo-grenzen
+gegner_min=0.89 -- tempo-grenzen
 gegner_max=1.04
 -- fahrprofile: 1 = gelb (demo),
 -- 2 = blau (rennen und demo)
@@ -65,12 +65,14 @@ windschatten_breite=8 -- px quer
                 -- bis ganz draussen
 windschatten_max=0.2 -- +20% tempo
                 -- direkt am heck
+hinten_bonus=0.1 -- +10% tempo fuer
+                -- den, der hinten
+                -- liegt (beide)
 
 --== testen ==
 zeige_linie=false -- ideallinie
-demo_warten=300 -- frames ruhe im
+demo_warten=600 -- frames ruhe im
                 -- menue, dann demo
-                -- (spaeter 1800)
 
 
 --== menue ==
@@ -549,7 +551,7 @@ function update_auto(t,turn,brems)
  -- untergrund; aquaplaning wenn
  -- schnell genug ins wasser
  local b=boden(t.x,t.y)
- local g,vm=grip,vmax*windschatten(t)
+ local g,vm=grip,vmax*tempo_bonus(t)
  if b==b_wasser then
   if (not t.aqua and not t.wasser_vor and v>=vmax*aqua_ab) t.aqua=true
   if (t.aqua and v<vmax*aqua_ab*0.6) t.aqua=false
@@ -958,17 +960,21 @@ function abstand()
  return 0
 end
 
--- windschatten: faktor aufs tempo
--- hinter dem anderen auto, voll
--- am heck und genau dahinter
-function windschatten(t)
+-- faktor aufs hoechsttempo: wer
+-- hinten liegt, bekommt den
+-- bonus. dazu windschatten hinter
+-- dem anderen auto, voll am heck
+-- und genau dahinter
+function tempo_bonus(t)
  local o=t==auto and gegner or auto
- if (not o or o.unfall>0 or o.fertig) return 1
+ if (not o) return 1
+ local f=fortschritt(t)<fortschritt(o) and 1+hinten_bonus or 1
+ if (o.unfall>0 or o.fertig) return f
  local dx,dy=welt_dx(t.x-o.x),welt_dy(t.y-o.y)
  local fx,fy=-sin(o.a),-cos(o.a)
  local h=-dx*fx-dy*fy
- if (h<=0) return 1
- return 1+windschatten_max*mid(0,(rempel_abstand+windschatten_laenge-h)/windschatten_laenge,1)*mid(0,1-abs(dx*fy-dy*fx)/windschatten_breite,1)
+ if (h<=0) return f
+ return f+windschatten_max*mid(0,(rempel_abstand+windschatten_laenge-h)/windschatten_laenge,1)*mid(0,1-abs(dx*fy-dy*fx)/windschatten_breite,1)
 end
 
 -- autos stossen sich ab
