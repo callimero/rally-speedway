@@ -14,8 +14,8 @@ __lua__
 
 --== spieler (gelb) ==
 
-bremse=0.03     -- bremsknopf
-rutsch_ab=0.15  -- ab da quietscht
+bremse=0.02     --.3  bremsknopf
+rutsch_ab=0.18  -- ab da quietscht
                 -- es + bremsspur
 -- lenkung: 32 richtungen,
 -- einschlag sammelt sich
@@ -37,22 +37,40 @@ gegner_anpassen=0.025 -- gummi-
                 -- band je feld
 gegner_min=0.85 -- tempo-grenzen
 gegner_max=1.04
-gegner_blick=20 -- px voraus auf
-                -- der ideallinie
-gegner_kurve={0.4,0.4,0.4} -- bremst
-                -- vor kurven je
-                -- belag (trocken/
-                -- nass/eis)
-gegner_toleranz=0.008 -- lenkt ab
-                -- dieser abweichung
-gegner_brems=0.023 -- bremst ab
-                -- dieser abweichung
+-- fahrprofile: 1 = gelb (demo),
+-- 2 = blau (rennen und demo)
+--  blick: px voraus auf der linie
+--  kurve: bremst vor kurven je
+--         belag (trocken/nass/eis)
+--  toleranz: lenkt ab abweichung
+--  brems: bremst ab abweichung
+profil={
+ {blick=24,kurve={0.2,0.4,0.6},toleranz=0.008,brems=0.03},
+ {blick=24,kurve={0.2,0.4,0.6},toleranz=0.008,brems=0.03},
+}
 rempel_abstand=7 -- px
 rempel_stoss=0.2 -- abprall
+-- ueberholen: liegt das andere
+-- auto so weit vorn auf der
+-- linie, schert der computer
+-- seitlich aus (nur auf strasse),
+-- sonst bleibt er dahinter
+ueberhol_abstand=30 -- px
+ueberhol_versatz=8 -- px seitlich
+
+--== windschatten (beide) ==
+windschatten_laenge=40 -- px ab
+                -- heck (3 autos)
+windschatten_breite=8 -- px quer
+                -- bis ganz draussen
+windschatten_max=0.2 -- +20% tempo
+                -- direkt am heck
 
 --== testen ==
 zeige_linie=false -- ideallinie
-nur_blau=false  -- nur blau faehrt
+demo_warten=300 -- frames ruhe im
+                -- menue, dann demo
+                -- (spaeter 1800)
 
 
 --== menue ==
@@ -182,6 +200,7 @@ menue={
  {"tempo","hoechst-tempo",tempo_wahl},
  {"beschl","beschleunigung",{"langsam","normal","schnell"}},
  {"linie","ideallinie",{"aus","an"}},
+ {"demo","zuschauen",nil,"demo"},
  {"info","ueber das spiel",nil,"info"},
 }
 
@@ -191,7 +210,11 @@ function zum_menue()
  menue_zeile=2
  menue_oben=1
  menue_bild=0
+ menue_ruhe=0
  vorschau_fuer=nil
+ -- nach der demo: eigene wahl
+ if (demo) opt=demo
+ demo=nil
 end
 
 function update_menue()
@@ -208,10 +231,15 @@ function update_menue()
  if btnp(4) or btnp(5) then
   if m[3] then
    neues_rennen()
+  elseif m[4]=="demo" then
+   demo_start()
   else
    modus=m[4]
   end
  end
+ -- ruhe im menue -> demo
+ menue_ruhe=btn()>0 and 0 or menue_ruhe+1
+ if (menue_ruhe>demo_warten) demo_start()
  menue_bild+=1
  -- vorschau neu bei anderer
  -- strecke oder belag
@@ -371,15 +399,18 @@ function neues_rennen()
  -- start im startteil (pfeile),
  -- faehrt nach rechts
  local x,y=feld_punkt(kurs[1])
- x-=teil_b\2-12
- auto=new_auto(x,y-6,0.25)
+ x-=teil_b\2+12
+ -- beide gleich weit neben der
+ -- ideallinie
+ y+=welt_dy(linie_y[1]-y)
+ auto=new_auto(x,y-2,0.25)
  auto.vmax=vmax
  gegner=nil
- if nur_blau then
-  auto.vmax=vmax*gegner_tempo
- elseif opt.gegner==2 then
-  gegner=new_auto(x,y+6,0.25)
+ if opt.gegner==2 then
+  gegner=new_auto(x,y+9,0.25)
   gegner.vmax=vmax*gegner_tempo
+  gegner.blau=true
+  gegner.profil=profil[2]
  end
  rennzeit=0
  gestartet=false
@@ -429,10 +460,25 @@ function update_rennen()
   zum_menue()
   return
  end
+ if demo then
+  -- o: kamera zum anderen auto,
+  -- andere taste: menue (erst
+  -- nach einer halben sekunde)
+  if rennzeit>30 then
+   if btnp(4) then
+    auto,gegner=gegner,auto
+    puffer_voll=true
+   elseif btnp()>0 then
+    zum_menue()
+    return
+   end
+  end
+  gestartet=true
+ end
  if not gestartet then
   -- start: irgendeine richtung
   for b=0,3 do
-   if (btn(b) or nur_blau) gestartet=true
+   if (btn(b)) gestartet=true
   end
  else
   rennzeit+=1
@@ -446,7 +492,7 @@ function update_rennen()
    local turn,br=0,btn(4) or btn(5)
    if (btn(0)) turn-=1
    if (btn(1)) turn+=1
-   if (nur_blau) turn,br=ki_eingabe(t)
+   if (demo) turn,br=ki_eingabe(t)
    update_auto(t,turn,br)
    unfall_start(t,pruefe_unfall(t))
    pruefe_kurs(t)
@@ -503,7 +549,7 @@ function update_auto(t,turn,brems)
  -- untergrund; aquaplaning wenn
  -- schnell genug ins wasser
  local b=boden(t.x,t.y)
- local g,vm=grip,vmax
+ local g,vm=grip,vmax*windschatten(t)
  if b==b_wasser then
   if (not t.aqua and not t.wasser_vor and v>=vmax*aqua_ab) t.aqua=true
   if (t.aqua and v<vmax*aqua_ab*0.6) t.aqua=false
@@ -575,6 +621,7 @@ end
 -- tempo brennt er
 function unfall_start(t,sp)
  if (not sp) return
+ t.crashs=(t.crashs or 0)+1
  t.fahrer={x=t.x,y=t.y,i=1,z=0,
   dir=rnd()<0.5 and -1 or 1,
   folge=sp>=t.vmax*brenn_ab
@@ -723,9 +770,9 @@ function draw_rennen()
  local g=gegner
  if g then
   -- blau relativ zu gelb runden
-  draw_wagen(g,flr(t.x)+flr(g.x-t.x+0.5),flr(t.y)+flr(g.y-t.y+0.5),true)
+  draw_wagen(g,flr(t.x)+flr(g.x-t.x+0.5),flr(t.y)+flr(g.y-t.y+0.5))
  end
- draw_wagen(t,t.x,t.y,nur_blau)
+ draw_wagen(t,t.x,t.y)
  draw_gischt()
  draw_rauch()
  draw_regen()
@@ -736,7 +783,8 @@ end
 
 -- auto, beim crash mit feuer
 -- und fahrer
-function draw_wagen(t,x,y,blau)
+function draw_wagen(t,x,y)
+ local blau=t.blau
  if (blau) pal(10,12)
  draw_auto(x,y,t.k/32)
  pal(10,10)
@@ -799,7 +847,7 @@ function update_gegner(g)
   -- gummiband: vorn langsamer,
   -- hinten schneller
   local d=fortschritt(g)-fortschritt(auto)
-  g.vmax=vmax*mid(gegner_min,gegner_tempo-d*gegner_anpassen,gegner_max)
+  g.vmax=vmax*(demo and gegner_tempo or mid(gegner_min,gegner_tempo-d*gegner_anpassen,gegner_max))
   update_auto(g,ki_eingabe(g))
  end
  -- immer nahe am spieler
@@ -812,11 +860,12 @@ function update_gegner(g)
 end
 
 -- computer faehrt: ziel auf der
--- ideallinie gegner_blick
+-- ideallinie profil.blick
 -- voraus, bremst vor kurven.
 -- gibt turn, bremse zurueck
 function ki_eingabe(g)
  local n=#kurs
+ local p=g.profil
  local i0=(g.nxt-3)%n+1
  local pts={}
  for s=0,11 do
@@ -831,13 +880,38 @@ function ki_eingabe(g)
  end
  local z=pts[#pts]
  for k=m,#pts do
-  if pts[k][3]>=gegner_blick then
+  if pts[k][3]>=p.blick then
    z=pts[k] break
+  end
+ end
+ -- anderes auto vorn auf der
+ -- linie: seitlich vorbei, wo
+ -- strasse ist, sonst dahinter
+ -- bleiben
+ local o,halt=g==auto and gegner or auto
+ if o and o.unfall==0 then
+  local dx,dy=welt_dx(o.x-g.x),welt_dy(o.y-g.y)
+  local fx,fy=-sin(g.a),-cos(g.a)
+  local vor,q=dx*fx+dy*fy,dy*fx-dx*fy
+  if vor>-rempel_abstand and vor<ueberhol_abstand and abs(q)<ueberhol_versatz*1.5 then
+   local s,frei=g.seite or q>0 and -1 or 1
+   for k=1,2 do
+    local x,y=z[1]-fy*s*ueberhol_versatz,z[2]+fx*s*ueberhol_versatz
+    if not frei and boden(x,y)==b_strasse and boden((x+g.x)/2,(y+g.y)/2)==b_strasse then
+     z={x,y} frei=s
+    end
+    s=-s
+   end
+   g.seite=frei
+   halt=not frei and vor>0 and g.v>o.v
+  else
+   g.seite=nil
   end
  end
  g.zx,g.zy=z[1],z[2]
  local w=(richtung(g.x,g.y,z[1],z[2])-g.a+0.5)%1-0.5
- local turn=w<-gegner_toleranz and -1 or w>gegner_toleranz and 1 or 0
+ local tol=p.toleranz
+ local turn=w<-tol and -1 or w>tol and 1 or 0
  -- drehung der linie ueber die
  -- naechsten 3 felder
  local dreh,ra=0
@@ -848,8 +922,8 @@ function ki_eingabe(g)
   if (ra) dreh+=abs((r-ra+0.5)%1-0.5)
   ra=r
  end
- local vz=g.vmax*max(0.35,1-dreh*gegner_kurve[opt.strasse])
- return turn,g.v>vz or abs(w)>gegner_brems and g.v>g.vmax*0.5
+ local vz=g.vmax*max(0.35,1-dreh*p.kurve[opt.strasse])
+ return turn,halt or g.v>vz or abs(w)>p.brems and g.v>g.vmax*0.5
 end
 
 -- ideallinie: catmull-rom-kurve
@@ -882,6 +956,19 @@ function abstand()
  if (pa<pg) return rennzeit-(gegner.zb[pa] or rennzeit)
  if (pa>pg) return (auto.zb[pg] or rennzeit)-rennzeit
  return 0
+end
+
+-- windschatten: faktor aufs tempo
+-- hinter dem anderen auto, voll
+-- am heck und genau dahinter
+function windschatten(t)
+ local o=t==auto and gegner or auto
+ if (not o or o.unfall>0 or o.fertig) return 1
+ local dx,dy=welt_dx(t.x-o.x),welt_dy(t.y-o.y)
+ local fx,fy=-sin(o.a),-cos(o.a)
+ local h=-dx*fx-dy*fy
+ if (h<=0) return 1
+ return 1+windschatten_max*mid(0,(rempel_abstand+windschatten_laenge-h)/windschatten_laenge,1)*mid(0,1-abs(dx*fy-dy*fx)/windschatten_breite,1)
 end
 
 -- autos stossen sich ab
@@ -919,11 +1006,40 @@ function gegner_pfeil(g,cx,cy)
  circfill(px,py,1,12)
 end
 
+-- ====== demo ======
+-- beide autos faehrt der
+-- computer, mit den menuewerten
+function demo_start()
+ demo=opt
+ opt={}
+ for k,v in pairs(demo) do opt[k]=v end
+ opt.gegner=2
+ neues_rennen()
+ auto.vmax=vmax*gegner_tempo
+ auto.profil=profil[1]
+ gegner.profil=profil[2]
+end
+
+-- log je rennen (datei im carts-
+-- ordner, rally_log.p8l): fuer
+-- die auswertung von fahrweisen
+function schreibe_log()
+ local ge,bl=auto,gegner
+ if (auto.blau) ge,bl=gegner,auto
+ local function z(t)
+  local s=""
+  for v in all(t.zeiten) do s..=v.."," end
+  return s..(t.crashs or 0)
+ end
+ printh((demo and "demo" or "rennen")..";"..opt.strecke..";"..opt.strasse..";"..tempo_wahl[opt.tempo]..";"..(sieger.blau and "blau" or "gelb")..";"..z(ge)..";"..z(bl),"rally_log")
+end
+
 -- ====== rennende ======
 
 function rennen_ende()
  modus="ergebnis"
  ergebnis_t=0
+ schreibe_log()
  sfx(-1,0) sfx(-1,1)
  sfx(3,2)
 end
@@ -932,13 +1048,15 @@ function update_ergebnis()
  ergebnis_t+=1
  update_rauch()
  if (opt.strasse>1) update_regen()
- if (ergebnis_t>60 and (btnp(4) or btnp(5))) zum_menue()
+ if (ergebnis_t>60 and (btnp(4) or btnp(5)) or demo and ergebnis_t>300) zum_menue()
 end
 
 function draw_ergebnis()
  rectfill(8,22,119,109,0)
  rect(8,22,119,109,7)
- mitte(sieger==auto and "gelb gewinnt!" or "blau gewinnt!",28,sieger==auto and 10 or 12)
+ mitte(sieger.blau and "blau gewinnt!" or "gelb gewinnt!",28,sieger.blau and 12 or 10)
+ local ge,bl=auto,gegner
+ if (auto.blau) ge,bl=gegner,auto
  schrift("runde",14,42,6)
  schrift("gelb",58,42,10)
  schrift("blau",92,42,12)
@@ -946,7 +1064,7 @@ function draw_ergebnis()
  for r=1,opt.runden do
   local y=42+r*7
   schrift(r,22,y,7)
-  local a,b=auto.zeiten[r],gegner.zeiten[r]
+  local a,b=ge.zeiten[r],bl.zeiten[r]
   schrift(a and zeit_text(a) or "-",52,y,7)
   schrift(b and zeit_text(b) or "-",86,y,7)
   sa+=a or 0 sg+=b or 0
@@ -954,8 +1072,8 @@ function draw_ergebnis()
  local y=46+opt.runden*7+4
  line(14,y-2,113,y-2,5)
  schrift("summe",14,y+1,6)
- schrift(#auto.zeiten>=opt.runden and zeit_text(sa) or "-",52,y+1,7)
- schrift(#gegner.zeiten>=opt.runden and zeit_text(sg) or "-",86,y+1,7)
+ schrift(#ge.zeiten>=opt.runden and zeit_text(sa) or "-",52,y+1,7)
+ schrift(#bl.zeiten>=opt.runden and zeit_text(sg) or "-",86,y+1,7)
  if (ergebnis_t>60 and t()%1<0.6) mitte("\151/\142 = menue",102,7)
 end
 
@@ -1122,7 +1240,7 @@ function draw_linie(test)
   end
   if (test) pset(t.x+welt_dx(linie_x[i]-t.x),t.y+welt_dy(linie_y[i]-t.y),8)
  end
- local z=nur_blau and auto or gegner
+ local z=gegner
  if (test and z and z.zx) circ(z.zx,z.zy,1,8)
 end
 -->8
@@ -1618,134 +1736,134 @@ bb111111111144bb11111111111144bbbb111111111144bb1111111111444411bb114411111111bb
 bb4411111111bbbb11111111111111bbbb111111111144bb1111111111bb4411bbbb441111bb44bb11111111bbbbbbbb33114433bbbbbbbb0000000000000000
 bb4411111111bbbb11111111111111bbbb111111111144bb1111111111bb4411bbbb441111bb44bb11111111bbbbbbbb33114433bbbbbbbb0000000000000000
 __label__
-rbbbbbb3r3r3rbbbbbb3r3r3rbbbbbb3r3r3rbbsrssrrsssrbbbbbbbbbb3r3r3rbbbbbb3r3r3rbbbbbb3r3r3rbbbbbb3r3r3rbbsrssrrsssrbbbbbbbbbb3r3r3
-30000000000000000000003r30000bb0000000bbrssbrsssrbbbbbbbbbbr3r3r3bbbbbbr3r3r3bbbbbbr3r3r3bbbbbbr3r3r3bbbrssbrsssr00000bbb000003r
-b077707070770077007770bbb0770b00707770bbbbbbbssrbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbssrb0nnn0bbb0nnn0bb
-b070707070707070707000bbb0070b07000070bbbbbrssssbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbrssssb0n0n0bbb0n0n0bb
-b07700707070707070770bbbbb070b070b0770bbbbssssssrbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbssssssr0n0n0bbb0n0n0bb
-b070707070707070707000bbb0070007000070bbbbsssssssbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbsssssss0n0n00000n0n0bb
-r070700770707077707770bbr077707000777033bbbssssssbbbr333bbbbbbbbr333bbbbbbbbr333bbbbbbbbr333bbbbbbbbr333bbbssssss0nnn00n00nnn0bb
-r000000000000000000000b3r0000000b000003r3bbsssssrbb3r33r3bbbbbb3r33r3bbbbbb3r33r3bbbbbb3r33r3bbbbbb3r33r3bbsssssr0000000000000b3
-33r33bbbbbbr33r33bbbbbbr33r33bbbbbbr33r33bbsssssrbbr33r33bbbbbbr33r33bbbbbbr33r33bbbbbbr33r33bbbbbbr33r33bbsssssrbbr33r33bbbbbbr
-3r3rbbbbbbbb3r3rbbbbbbbb3r3rbbbbbbbb3r3rbbbrssssrbbb3r3rbbbbbbbb3r3rbbbbbbbb3r3rbbbbbbbb3r3rbbbbbbbb3r3rbbbrssssrbbb3r3rbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbssrbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbssrbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbrssssbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbrssssbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbssssssrbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbssssssrbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbsssssssbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbsssssssbbbbbbbbbbbbbbb
-333rbbbbbbbb333rbbbbbbbb333rbbbbbbbb333rbbbssssssbbb333rbbbbbbbb333rbbbbbbbb333rbbbbbbbb333rbbbbbbbb333rbbbssssssbbb333rbbbbbbbb
-33r33bbbbbb333r33bbbbbb333r33bbbbbb333r33bbsssssrbb333r33bbbbbb333r33bbbbbb333r33bbbbbb333r33bbbbbb333r33bbsssssrbb333r33bbbbbb3
-3r33r3bbbb3r3r33r3bbbb3r3r33r3bbbb3r3r33r3bsssssrb3r3r33r3bbbb3r3r33r3bbbb3r3r33r3bbbb3r3r33r3bbbb3r3r33r3bsssssrb3r3r33r3bbbb3r
-333333bbbb33333333bbbb33333333bbbb33333333brssssrb33333333bbbb33333333bbbb33333333bbbb33333333bbbb33333333brssssrb33333333bbbb33
-3r3r3rbbbbr33r3r3rbbbbr33r3r3rbbbbr33r3r3rbbbssrbbr33r3r3rbbbbr33r3r3rbbbbr33r3r3rbbbbr33r3r3rbbbbr33r3r3rbbbssrbbr33r3r3rbbbbr3
-r333r3bbbb33r333r3bbbb33r333r3bbbb33r333r3brssssbb33r333r3bbbb33r333r3bbbb33r333r3bbbb33r333r3bbbb33r333r3brssssbb33r333r3bbbb33
-r3r3rbbbbbb3r3r3rbbbbbb3r3r3rbbbbbb3r3r3rbssssssrbb3r3r3rbbbbbb3r3r3rbbbbbb3r3r3rbbbbbb3r3r3rbbbbbb3r3r3rbssssssrbb3r3r3rbbbbbb3
-3r3r3bbbbbbr3r3r3bbbbbbr3r3r3bbbbbbr3r3r3bsssssssbbr3r3r3bbbbbbr3r3r3bbbbbbr3r3r3bbbbbbr3r3r3bbbbbbr3r3r3bsssssssbbr3r3r3bbbbbbr
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbssssssssbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbssssssssbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbrssssssssrbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbrssssssssrbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbssssssssssrbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbssssssssssrbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbssssssssssrbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbssssssssssrbbbbbbbbbbbbbbb
-bbbbr333bbbbbbbbr333bbbbbbbbr333bbbbsssssssssssrbbbbbbbbr333bbbbbbbbr333bbbbbbbbr333bbbbbbbbr333bbbbsssssssssssrbbbbbbbbr333bbbb
-bbb3r33r3bbbbbb3r33r3bbbbbb3r33r3bbsssssssssssssbbbbbbb3r33r3bbbbbb3r33r3bbbbbb3r33r3bbbbbb3r33r3bbsssssssssssssbbbbbbb3r33r3bbb
-bbbr33r33bbbbbbr33r33bbbbbbr33r33bbsrsssssssssssrbbbbbbr33r33bbbbbbr33r33bbbbbbr33r33bbbbbbr33r33bbsrsssssssssssrbbbbbbr33r33bbb
-bbbb3r3rbbbbbbbb3r3rbbbbbbbb3r3rbbbbrssssssssssssbbbbbbb3r3rbbbbbbbb3r3rbbbbbbbb3r3rbbbbbbbb3r3rbbbbrssssssssssssbbbbbbb3r3rbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbsssssssssssbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbsssssssssssbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbrsssssssssrbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbrsssssssssrbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbsssssssssrbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbsssssssssrbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbsssssssssrbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbsssssssssrbbbbbbbbbbbbbbb
-bbbbbbbb333rbbbbbbbb333rbbbbbbbb333rbbbssssssssrbbbbbbbbbbbb333rbbbbbbbb333rbbbbbbbb333rbbbbbbbb333rbbbssssssssrbbbbbbbbbbbb333r
-3bbbbbb333r33bbbbbb333r33bbbbbb333r33bbsssssssssbbbbbbbbbbb333r33bbbbbb333r33bbbbbb333r33bbbbbb333r33bbsssssssssbbbbbbbbbbb333r3
-r3bbbb3r3r33r3bbbb3r3r33r3bbbb3r3r33r3bsssssssssrbbbbbbbbb3r3r33r3bbbb3r3r33r3bbbb3r3r33r3bbbb3r3r33r3bsssssssssrbbbbbbbbb3r3r33
-33bbbb33333333bbbb33333333bbbb33333333brsssssssssbbbbbbbbb33333333bbbb33333333bbbb33333333bbbb33333333brsssssssssbbbbbbbbb333333
-3rbbbbr33r3r3rbbbbr33r3r3rbbbbr33r3r3rbbbssssssssbbbbbbbbbr33r3r3rbbbbr33r3r3rbbbbr33r3r3rbbbbr33r3r3rbbbssssssssbbbbbbbbbr33r3r
-r3bbbb33r333r3bbbb33r333r3bbbb33r333r3brssssssssrbbbbbbbbb33r333r3bbbb33r333r3bbbb33r333r3bbbb33r333r3brssssssssrbbbbbbbbb33r333
-rbbbbbb3r3r3rbbbbbb3r3r3rbbbbbb3r3r3rbssssssssssrbbbbbbbbbb3r3r3rbbbbbb3r3r3rbbbbbb3r3r3rbbbbbb3r3r3rbssssssssssrbbbbbbbbbb3r3r3
-3bbbbbbr3r3r3bbbbbbr3r3r3bbbbbbr3r3r3bssssssssssrbbbbbbbbbbr3r3r3bbbbbbr3r3r3bbbbbbr3r3r3bbbbbbr3r3r3bssssssssssrbbbbbbbbbbr3r3r
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbrsssrsssbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbrsssrsssbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbrrbbrrbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbrrbbrrbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb33333300bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb333bbbbbb0000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-7878787878787878787878787878787878787878557878787878n008787878787878787878787878787878787878787878787878787878787878787878787878
-66666666666666666666666666666666666666666666666666nnnnn6666666666666666666666666666666666666666666666666666666666666666666666666
-6666668666666686666666866666668666666686666666666nnn00nn666666666666666666666666666666666666666666666666666666666666666666666666
-6666668866666688666666886666668866666688666666666nn00nnnnn0666666666666666666666666666666666666666666666666666666666666666666666
-8668888886688888866888888668888886688888866666666nn0nnnnnn0066666666666666666666666666666666666666666666666666666666666666666666
-88688888886888888868888888688888886888888866665500nnnnnnnnn666666666666666666666666666666666666666666666666666666666666666666666
-88688888886888888868888888688888886888888855556600006660nn6666666666666666666666666666666666666666666666666666666666666666666666
-86688888866888888668888886688888866888885566666666006660006666666666666666666666666666666666666666666666666666666666666666666666
-66666688666666886666668866666688666666556666666666666666666666666666666666666666666666666666666666666666666666666666666666666666
-66666686666666866666668666666686666666856666666666666666666666666666666666666666666666666666666666666666666666666666666666666666
-66866666668666666686666666866666668666665586666666666666666666666666666666666666666666666666666666666666666666666666666666666666
-66886666668866666688666666886666668866666558666666666666666666666666666666666666666666666666666666666666666666666666666666666666
-88888668888886688888866888888668888886688885566666666666666666666666666666666666666666666666666666666666666666666666666666666666
-88888868888888688888886888888868888888688888855666666666666666666666666666666666666666666666666666666666666666666666666666666666
-88888868888888688888886888888868888888688888886555666666666666666666666666666666666666666666666666666666666666666666666666666666
-88888668888886688888866888888668888886688888866666555006660006666666666666666666666666666666666666666666666666666666666666666666
-66886666668866666688666666886666668866666688666666600006660cc6666666666666666666666666666666666666666666666666666666666666666666
-66866666668666666686666666866666668666665686666666600ccccccccc666666666666666666666666666666666666666666666666666666666666666666
-6666668666666686666666866666668666666686656666666666cc0cccccc0066666666666666666666666666666666666666666666666666666666666666666
-6666668866666688666666886666668866666688665566666666cc00ccccc0666666666666666666666666666666666666666666666666666666666666666666
-8668888886688888866888888668888886688888866655666666ccc00cc666666666666666666666666666666666666666666666666666666666666666666666
-88688888886888888868888888688888886888888866665555666ccccc6666666666666666666666666666666666666666666666666666666666666666666666
-8868888888688888886888888868888888688888886666666655555c006666666666666666666666666666666666666666666666666666666666666666666666
-86688888866888888668888886688888866888888666666666666600006666666666666666666666666666666666666666666666666666666666666666666666
-66666688666666886666668866666688666666886666666666666600666666666666666666666666666666666666666666666666666666666666666666666666
-66666686666666866666668666666686666666866666666666666666666666666666666666666666666666666666666666666666666666666666666666666666
-66666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666
-87878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbb333rbbbbbbbb333rbbbbbbbb333rbbbbsssrbrsssbbbbb688888888888888888888888888888888888888888888886bbbbbbr333bbbbbbbbbbbbbbbb
-3bbbbbb333r33bbbbbb333r33bbbbbb333r33bbsssssrssbrbbbbb868888888888888888888888888888888888888888888868bbbbb3r33r3bbbbbbbbbbbbbbb
-r3bbbb3r3r33r3bbbb3r3r33r3bbbb3r3r33r3bsrssssssssbbbbb886888888888888888888888888888888888888888888688bbbbbr33r33bbbbbbbbbbbbbbb
-33bbbb33333333bbbb33333333bbbb33333333bbrssssssbrbbbbb888688888888888888888888888888888888888888886888bbbbbb3r3rbbbbbbbbbbbbbbbb
-3rbbbbr33r3r3rbbbbr33r3r3rbbbbr33r3r3rbbsssssssssbbbbb888868888888888888888888888888888888888888868888bbbbbbr333bbbbbbbbbbbbbbbb
-r3bbbb33r333r3bbbb33r333r3bbbb33r333r3bsssssssssrbbbbb888886888888888888888888888888888888888888688888bbbbb3r33r3bbbbbbbbbbbbbbb
-rbbbbbb3r3r3rbbbbbb3r3r3rbbbbbb3r3r3rbbsrssrrsssrbbbbb888888688888888888888888888888888888888886888888bbbbbr33r33bbbbbbbbbbbbbbr
-3bbbbbbr00000000000000000bbbbbbr3r3r3bbbrssbrsssrbbbbb880008000000000000088888888888888888888868888888b00000000000000000bbbbbb3s
-bbbbbbbb07770777077707770bbbbbbbbbbbbbbbbbbbbssrbbbbbb880708077700770777088888888888888888888688888888b07770777007707770bbbbr3r3
-bbbbbbbb00700070077707000bbbbbbbbbbbbbbbbbbrssssbbbbbb880708070707000070088888888888888888886888888888b07070700070000700bbb3r333
-bbbbbbbbb070b07007070770bbbbbbbbbbbbbbbbbbssssssrbbbbb880708077707770070888888888888888888868888888888b0770077007770070bbbbr3333
-bbbbbbbbb0700070070707000bbbbbbbbbbbbbbbbbsssssssbbbbb880700070700070070666666666666666666688888888888b0707070000070070bbbbb3r3r
-r333bbbbb0700777070707770333bbbbbbbbr333bbbssssssbbbbb880777070707700070888888888888888888868888888888b0777077707700070bbbbbbbr3
-r33r3bbbb000000000000000033r3bbbbbb3r33r3bbsssssrbbbbb880000000000008000888888888888888888886888888888b000000000000b000bbbbbbbbr
-33r300000bbr00000000bbbr00000bbbbbbr33r33bbsssssrbb0000088800000000088800000888888888888888886888800000bbb000000000bbb00000bbbbb
-3r3r0777000007770770b00007770bbbbbbb3r3rbbbrssssrbb077700000777077700000777088888888888888888868880777000007770777000007770bbbbb
-bbbb0707007007070070b07000070bbbbbbbbbbbbbbbbssrbbb070700700707070700700707088888888888888888886880707007007070707007007070bbbbb
-bbbb0707000007070070b00007770bbbbbbbbbbbbbbrssssbbb070700000707070700000707088888888888888888888680707000007070707000007070bbbbb
-bbbb0707007007070070007007000bbbbbbbbbbbbbssssssrbb070700700707070700700707088888888888888888888860707007007070707007007070bbbbb
-bbbb0777000007770777000007770bbbbbbbbbbbbbsssssssbb077700000777077700000777088888888888888888888880777000007770777000007770bbbbb
-333r00000bbb000000000bbb00000bbbbbbb333rbbbssssssbb0000088800000000088600000888888888888888888888800000bbb000000000bbb00000bbbbb
-33r33bbbbbb333r33bbbbbb333r33bbbbbb333r33bbsssssrbbbbb888888888688888886888888888888888888888888888868bbbbb3r33r3bbbbbbbbbbbbbb3
+bbbbbb333r33bbbbbb333r33bbsssssssssbbbbbbbbbbbbbbbb7ddddddddddddddddddddddddddddddddddddddddddddddd5ddddddddd87bbbbbbbbbbbbbbbbb
+30000000000000000000003r30000ss000000bbbbbbbbbbbbb87dddddddddddddddddddddddddddddddddddddddddddddddddddddd787bbbb00000bbb00000bb
+30777070707700770077703330770s0070770bbbbbbbbbbbb7ddddddddddddddddddddddddddddddddddddddddddddddddddddddd8bbbbbbb0nnn0bbb0nnn0bb
+r070707070707070707000r3r0070s0700070bbbbbbbbbbb8ddddddddddddddddddddddddddddddddddddd5ddddddddd5ddddddd7bbbbbbbb0n0n0bbb0n0n0bb
+30770070707070707077033r3b070s070s070bbbbbbbbbb7dddddddddddddddddddddddddddddddddddddd5dddddddddddddddd8bbbbbbbbb0n0n0bbb0n0n0bb
+b0707070707070707070003rb0070007000700bbbbbbbb8ddddddddddddddddddddddddddddddddddddddddddddddddddddddd7bbbbbbbbbb0n0n00000n0n0bb
+b070700770707077707770r3b0777070007770bbbbbbb7ddddddddddddddddddddddddddddddddddddddddddddddddddddddd8bbbbbbbbbbb0nnn00n00nnn0bb
+b000000000000000000000bbb0000000s00000bbbbbb8ddddddddddddddddddddddddddddddddddddddd5dddddddd5dddddd7bbbbbbbbbbbb0000000000000bb
+bbbbbbbbbbbbbbbbbbbbbbbbbbrrbbrrbbbbbbbbbbb7ddddddddddddddddddddddddddddddddddddddddddddddddd5ddddd8bbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb8ddddddddddddddddddddddddddddddddddddddddddddddddddddddd7bbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb7dddddddddddddddddddddddddddddddddddddddd5dddddddddddddd8bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb8dddddddddddddddddddddddddddddddddddddddddddddddddd5dddd7bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb7dddddddddddddddddddddddddddddddcdddddddddddddddddddddd8bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb8dddddddddddddddddddddddddddddddddddddddddddddddddddddd7bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb7ddddddddddddddddddddddddddddddddddddddddddddddddd5ddd8bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbb333rbbcbbbbb333rbbbbsssrbrsssbbb8dddddddddddddddddddddddddddddddddddddddd5ddddddddddd7bbbbbbbbbbbbbbbbbb333rbbbbbbbb333rb
+bbbbbb333r33bbbbbb333r33bbsssssrssbrbbb7dddddddddddddddddddddddddd7dddddddddddd5dddddddcddd8bbbbbbbbbbbbbbbbbb333r33bbbbbb333r33
+3bbbb3r3r33r3bbbb3r3r33r3csrssssssssbb8ddddddddddddddddddddddddddddddddddddddddddddddddddd7bbbbbbbbbbbbbbbbbb3r3r33r3bbbb3r3r33r
+3bbbb33333333bbbb33333333bbrssssssbrbb7ddddddddddddddddddddddddddddddddddddddd5dddddddddd8bbbbbbbbbbbbbbbbbbb33333333bbbb3333333
+rbbbbr33r3r3rbbbbr33r3r3rbbsssssssssbb8ddddddddddddddddddddddddddddddddddddddd5dddddddd57bbbbbbbbbbbbbbbbbbbbr33r3r3rbbbbr33r3r3
+3bbbb33r333r3bbbb33r333r3bsssssssssrbb7dddddddddddddddddddddddddddddddddddddd5dddddddd5d8bbbbbbbbbbbbbbbbbbbb33r333r3bbbb33r333r
+bbbbbb3r3r3rbbbbbb3r3r3rbbsrssrrsssrb8dddddddddddddddddddddddddddddddddddddd5dddddddc557bbbbbbbbbbbbbbbbbbbbbb3r3r3rbbbbbb3r3r3r
+bbbbbbr3r3r3bbbbbbr3r3r3bbbrssbrsssrb7ddddddddddddddddddddddddddddddddddddddddddddddd5d8bbbcbbbbbbbbbbbbbbbbbbr3r3r3bbbbbbr3r3r3
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbssrbb8ddddddddddddddddddddddddddddddddddddd55ddddddd5dd7bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbrssssbb7ddddddddddddddddddddddddddddddddddddd5dddd7ddd5d8bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbbbcbbbbbbbbbbbssssssrb8ddddddddddddddddddddddddddddddddcddd55ddddddd5dd7bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbsssssssb7dddcdddddddddddddddddddddddddddddddd5ddddddd55d8bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+333bbbbbbbbr333bbbbbbbbr333bbbssssssb8ddddddddddddddddddddddddddddddddddd5dddddddd5d7bbbbbbbbbbbbbbbbbbr333bbbbbbbbr333bbbbbbbbr
+33r3bbbbbb3r33r3bbbbbb3r33r3bbsssssrb7dddddddddddddddddddddddddddddddddcd5ddddddd55d8bbbbbbbbbbbbbbbbb3r33r3bbbbbb3r33r3bbbbbb3r
+3r33bbbbbbr33r33bbbbbbr33r33bbsssssrb8ddddddddddcdddddddddddddddddddddddddddddddd5d7bbbbbbbbbbbbbbbbbbr33r33bbbbbbr33r33bbbbbbr3
+r3rbbbbbbbb3r3rbbbbbbbb3r3rbbbrssssrb7dddddddddddddddddddddddddddddddddd55dddddd55d8bbbbbbbbbbbbbbbbbbb3r3rbbbbbbbb3r3rbbbbbbbb3
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbssrbb8dddddddddddddddddddddddddddddddddd5ddddddd5d7bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbrssssbc7ddddddddddddddddddddddddddddddddd55dddddd55d8bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbssssssrb8ddddddddddddddddddddddddddddddddd5ddddddd5dd7bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbcbbbbbbbbbbbbbbbbbbbsssssssb7dddddddddddddddddddcdddddddddddd55ddd7dd55dd8bbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbb
+33rbbbbbbbb333rbbbbbbbb333rbbbssssssb8ddddddddddddddcdddd7dddddddddddd55dddddd5ddd7bbbbbbbbbbbbbbbbbbbb333rbbbbbbbb333rbbbbbbbb3
+3r33bbbbbb333r33bbbbbb333r33bbsssssrb7dddddddddddddddddddddddddddddcdd7ddddddc5ddd8bbbbbbbbbbbbbbbbbbb333r33bbbbbb333r33bbbbbb33
+r33r3bbbb3r3r33r3bbbb3r3r33r3bsssssrb8ddddddddddddddddddddddddddddddd55dddddd5dddd7bbbbbbbbbbbbbbbbbb3r3r33r3bbbb3r3r33r3bbbb3r3
+33333bbbb33333333bbbb33333333brssssrb7dddddddddddddddddddddddddddcdddd5ddddd55dddd8bbbbbbbbbbbbbbbbbb33333333bbbb33333333bbbb333
+r3r3rbbbbr33r3r3rbbbbr33r3r3rbbbssrbb8ddddddddddddddddddddddddddddddd5dddddd5ddddd7bbbbbbbbbbbbbbbbbbrc3r3r3rbbbbr33r3r3rbbbbr33
+333r3bbbb33r333r3bbcb33r333r3brssssbb7dddddddddddddddddddddddddddddd55ddnnnn00dddd8bbbbbbbbbbbbbbbbbb33r333r3bbbb33r333r3bbbb33r
+3r3rbbbbbb3r3r3rbbbbbb3r3r3rbssssssrb8dddddddddddddddddddddddcdddddd500nn00n00dddd7bbbbbbbbbbbbbbbbbbb3r3r3rbbbbbb3r3r3rbbbbbb3r
+r3r3bbbbbbr3r3r3bbbbbbr3r3r3bsssssssb7dcdddddddddddddddddddddddddddd500n00nn00dddd8bbbbbbbbbbbbbbbbbbbr3r3r3bbbbbbr3r3r3bbbbbbr3
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbssssssssb8ddddddddddddddddddddddddddddddd00nnnnndddddd7bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbbbbbbbbbbbbrssssssssrb7dddddddddddddddddddddddddddddd5dddnnn5dddddd8bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbbbbbbbbbbbssssssssssrb8dddddddddddddddddddddddddddddd5ddddnnn0ddddd7bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbbbbbbbbbbbssssssssssrb7dddddddddddddddddddddddddddddd5ddd07nn0ddddd8bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbr333bbbbbbbbr333bbbbsssssssssssrbb8dddddddddddddddddddddddddddddd5ddd07n50dcddddcbbbbbbbbbbbbbbbbbbbbbbbr333bbbbbbbbr333bbbbb
+bb3r33r3bbbbbb3r33r3bbsssssssssssssbb7dddddddddddddddddddddddddddddd5cdd0dd5ddddddd8bbbbbbbbbbbbbbbbbbbbbb3r33r3bbbbbb3r33r3bbbb
+bbr33r33bbbbbbr33r33bbsrsssssssssssrb8dddddddddddddddddddddddddddddd5dddddd5dddddddd7bbbbbbbbbbbbbbbbbbbbbr33r33bbbbbbr33r33bbbb
+bbb3r3rbbbbbbbb3r3rbbbbrssssssssssscb7dddddddddddddddddddddddddddddd7dddddd5dddddddd8bbbbbbbbbbbbbbbbbbbbbb3r3rbbbbbbbb3r3rbbbbb
+bbbbbbbbbbbbbbbbbbbbbbbbbsssssssssssb8dddddddddddcddddddddddddddddddcdddddd5ddddddddd7bbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbbbbbbbbbbbrsssssssssrb7dddddddddddddddddddddddddddddd5ddddd00ddddddddd8bbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbbcbbbbbbbbcsssssssssrb8ddddddddddddcdddddddddddddddddd5dddd000dddddcddd7bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbbbbbbbbbbbbsssssssssrb7ddddddddddddddddddddddddddddddd5ddddc00ddddddddd8bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbb333rbbbbbbbb333rbbbssssssssrbb8ddddddddddddddddddddddddddddddd7ddccccddddddddddd7bbbbbbbbbbbbbbbbbbbbbbb333rbbbbbbbb333rb
+bbbbbb333r33bbbbbb333r33bbsssssssssbb7ddddddddddddddddddddddddddddddd5ddcc0ccdddddddddd8bbbbbbbbbbbbbbbbbbbbbb333r33bbbbbb333r33
+3bbcb3r3r33r3bbbb3r3r33r3bsssssscssrbb8ddcddddddddddddddddddddddddddd00cc000cddddddddddd7cbbbbbbbbbbbbbbbbbbb3r3r33r3bbbb3r3r33r
+3bbbb33333333bbbb33333333brsssssssssbb7dddddddddddddddddddddddddddddd000c0cccc00dddddddd8bbbbbbbbbbbbbbbbbbbb33333333bbbb3333333
+rbbbbr33r3r3rbbbbr33r3r3rbbbssssssssbb8ddcdddddddddddddddddddddddddddd00dcccccc00dddddddd7bbbbbbbbbbbbbbbbbbbr33r3r3rbbbbr33r3r3
+3cbbb33rc33r3bbbb33r333r3brssssssssrbb7ddddddddddddddddddddddddddddddddddddcccdddddddddddd8bbbbbbbbbbbbbbbbbb33r333r3bbbb33r333r
+bbbbbb3r3r3rbbbbbb3r3rcrbssssssssssrbbb8ddddddddddddddddddddddddddddddddddd00dddddddddddddd7bbbbbbbbbbbbbbbbbb3r3r3rbbbbbb3r3r3r
+bbbbbbr3r3r3bbbbbbr3r3r3bssssssssssrbbb7dddddddddddddddddddddddddddddddddddd00dddddddddddddd8bbbbbbbbbbbbbbbbbr3r3r3bbbbbbr3r3r3
+bbbbbbbbbbbbbbbbbbbbbbbbbrsssrsssbbbbbb8dddddd7dddddddddddddddddddddddddddddddddddddddddddddd7bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbbbbbbbbbbbbrrbbrrbbbbbbbb7ddddddddddddddddddddddddddddcdddddddddddcdddddddddddd8bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbcbbbb8dddddcdddddddddddddddddddddddddddddddddddddddddddddddd7bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddddddddddddddddddddd8bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbcbbbbbbbbb8ddddddddddddddddddddddddddddddddddddddddddddddddddddddd7bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb7dddddddddd7ddddddddddddddddddddddddddddddddcddddddddddd8cbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbrsrbbbbbrsrbbbbbrsrbbbbbrsrbbbbbbbbbbbbbb8dddddddddddddddddddddddddddddddddddddddcddddddddddddddd7bbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bssssbbbbssssbbbbssssbbbbsssscbbbbbbbbbbbbbb7ddddddddddddddddddddddddddddddddddddddddddddddddddddddd8bbbbbbbbbbbbbbbbbbbbbbbbbbb
+rsssssrbrsssssrbrsssssrbrsssssrbbbbbbbcbbbbbb8ddddddddddddddddddddddddddddddddddddddddddddddddddddddd7bbbbbbbbbbbbbbbbbbbbbbbbbb
+sssssscrsssssssrsssssssrsssssssbbbbbbbbbbbcbbb7ddddddddddddddddddddddddddddddddddddddddddddddddddddddd8bbbbbbbbbbbbbbbbbbbbbbbbb
+sssscscssssssssssssssssssssssssrbbbbbbbbbbbbbbb8dddddddddddddddddddddddddddddddddddddddddddddddddddddcd7bbbbbbbbbbbbbbbbbbbbbbbb
+scssssssssssssssssssssssssssssssbbbbbbbbbbbbbbbb7ddddddddddddddddddddddddddddddddddddddddddddddddddddddd8bbbbbbbbbbbbbbbbbbbbbbb
+ssssssssssssssssssssbrssssssssssbbbbbbbbbbbbbbbbb8ddddddddddddddddddddddddddddcdddddddddddddddddddddddddd7bbbbbbbbbbbbbbbbbbbbbb
+ssssssssssssssssssbrbbrrbrsssssrbbbbbbbbbbbbbbbbbb7ddddddddddddddddddddddddddd7ddddddddddddddddddddddddddd8bbbbbbbbbbbbbbbbbbbbb
+ssssssssssssssssssssbbbbbbsssssrbbbbbbbbbbbbbbbbbbb8ddddddddddddddddddddddddddddddddddddddddddddddddddddddd7bbbbbbbbbbbbbbbbbbbb
+ssssssssssssssssssbrbbbbbbsssssrbbbbbbbbbbbbbbbbbbbb7ddddcdddddddddddddddddddddddddddddddddddddddddddddddddd8bbbbbbbbbbbbbbbbbbb
+ssssssssssssssssssrbbbbbbsssssssbbbbbbbbbbbbbbbbbbbbb8dddcddddddddddddddddddddddddddddddddddddddddddddddddddd7bbbbbbbbbbbbbbbbbb
+sssssssssssssssssssbbbbbbcssssssbbbbbbbbbbbbbbbbbbbbbb7ddddddddddddddddddddddddddddddddddddddddddddddddddddddd878bbbbbbbbbbbbbbb
+sssssssssssssssssssrbbrsrsrrsssrbbbbbbbbbbbbbbbbbbbbbbb8ddddddddddddddddddddddddddddddddddddddddddddddddddddddddd78bbbbbbbbbbbbb
+sssssssssssssssssssscsssssbrsssbbbbbbbbbbbbbbbbbbbbbbbbb7dddddddddddddddddddddddddddddddddddddddddddddddddddddddddd78bbbbbbbbbbb
+ssssssssssssssssssssssssssrbrbbbbbbbbbbbbbbbbbbbbbbbbbbbb87dddddddddddddddddddddddddddddddddddddddddddcdddddddddddddd78787878787
+sssssssssssssssssssssssssssrsbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb87ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+sssssssssssssssssssssssssssssbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb8dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+sssssssssssssssssssssssssssssbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb78dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+ssssbbssssssssssssssssssssssssrbrbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb8dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+ssbrbbsssssssssssssssssssssssssrsbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb7ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+scssbbsssssssssssssssssssssssssssbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb8dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+ssbrbbrssssssssssssssssssssssssssbbbbbbbbbbbbbbbbbbbbbbbbbcbbbbbbbbb7ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+bbbr333bbsssscssssssssssssssssssbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb8dddddddddddddddddddddddddddddcdddddddddddddddddddddddddddd
+bb3r33r3brssssssssssssssssssssbrbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb7ddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+bbr33r33bbssssssssssssssssrrssssbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbb8dddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+bbb3r3rbbbssssssssssssssssbrssbrbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb7ddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+br3rcbbsssssssssssssssssssrbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb8dddddddddddddddddddddddddddddddddddddddddddddddddddddd
+b333rbsssssssssssssssssssssbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb7dddddddddddddddddddddddddd7dddddddddddddddddddddddddd
+b33r3bsrsssssssssssssssssssrbbbbbbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbb8dddddddddddddddddddddddddddddddddddddddddddddddddddd
+b3rrrbbrssssssssssssssssssssbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb7ddddddddddddddddddddddddddddddddddddddddddddddddddd
+ssrbrsrbrsssssssssssssssssssbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb8dddddddddddddddddddddddddddddddddddddddddddddddddd
+sssrsssrcsssssssssssssssssssbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb7ddddddddddddddddddddddddddddddddddddddddddddddddd
+ssssssssssscsssssssssssssssrcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb8dddddddddddddddddddddddddddddddddddddddddddddddd
+sssssssssssssssssssssssssssbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbb7dcddddddddddddddddddddddddddddddddddddddddddddd
+ssssssssssssssssssssbrsssbbr333bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb8dddddddddddddddddddddddddddddddddddddddddddddd
+sssssssssssssssssssrbbrrbb3r33r3bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb7ddddddddddddddddddddddddddddddddddddddddddddd
+sssssssssssssssssssrbbbbbbr33r33bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb8dddddddddddddddddddddddddddddddddddddddddddd
+sssssssssssssssssssrbbbbbbb3r3rbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb7ddddddddddddddddddcdddddddddddddddddddddddd
+csssssssssssssssssssssrbbbbbssssbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb8dddddddddddddddddddddddddddddddddddddddddd
+sssssssssssssssssssssssbbbrsssbrbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb7ddddddddddddddddddddddddddddddddddddddddd
+sssssssssssssssssssssssrbsssssssbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb8dddddddddddddddddddddddddddddddddddddddd
+ssssssssssssssssssssssssbsssssbrbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb7ddddddddddddddddddddddddddddddddddddddd
+ssssssssbbssssssssssssssssssssssbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb87ddddddddddddddddddddddddddddddddddddd
+ssssssssbbssssssssssssssssssssbrbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbb87ddddddddddddddddddddddddddddddddddd
+sssssssr00000000000000000ssscsssbbbbbbbbbbbbbbbbbbbbbbbb000b0000000000000bbbbbbbbbbbbbbbbbbbb8ddddddddd00000000000000000dddddddd
+sssssssb07770777077707770sssssbrbbbbbbbbbbbbbbbbbbbbbbbb070b0777007707770bbcbbbbbbbbbbbbbbbbbb78ddddddd07770777007707770dddddddd
+ssssssss00700070077707000sssbbbbbbbbbbbbbbbbbbbbbbbbbbbb070b0707070000700bbbbbbbbbbbbbbbbbbbbbbcb8ddddd07070700070000700dddddddd
+brsssssrb070s07007070770ssbrbbbbbbbbbbbbbbbbbbbbbbbbbbbb070b077707770070bbbbbbbbbcbbbbbbbbbbbbbbbb7dddd0770077007770070ddddddddd
+bbsssssrb0700070070707000sssbbbbbbbbbbbbbbbbbbbbbbbbbbbb0700070700070070bbbbbbbbbbbbbbbbbbbbbbbbbbb8ddd0707070000070070ddddddddd
+bbsssssrb0700777070707770sbrbbbbbbbbbbbbbbbbbbbbbbbbbbbb0777070707700070bbbbbbbbbbbbbbbbbbbbbcbbbbbb7dd0777077707700070ddddddddd
+brsssbbbb0000000000000000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb000000000000b000bbbbbbbbbbbbbbbbbbbbbbbbbbcbb87000000000000d000ddddddddd
+bbrr00000bbb0000000bcbrr000bbbbbbbbbbbbbbbbbbbbbbbb00000bbb000000000bbb00000bbbbbbbbbbbbbbbbbbbbbb00000878000000000ddd00000ddddd
+bbbb077700000777070bb000070bbbbbbbbbbbbbbbbbbbbbbbb0777000007770777000007770bbbbbbbbbbbbbbbbbbbbbb0777000007770777000007770ddddd
+bbbb0707007000070700007007000bbbbbbbbbbbbbbbbbbbbbb0707007007070707007007070bbbbbbbbbbbbbbbbbbbbbb070700700707070700700707087878
+bbbb0707000007770777000007770bbbbbbbbbbbbbbbbbbbbbb0707000007070707000007070bbbbbbbbbbbbbbbbbbbbbb0707000007070707000007070bbbbb
+bbbb0707007007000707007007070bbbbbbbbbbbbbbbbbbbbbb0707007007070707007007070bbbbbbbbbbbbbbbbbbbbbb0707007007070707007007070bbbbb
+bbbb0777000007770777000007770bbbbbbbbbbbbbbbbbbbbbb0777000007770777000007770bbbbbbbbbbbbbbbbbbbbbb0777000007770777000007770bbbbb
+bbbb00000bbb000000000bbb00000bbbbbbbbbbbbbbbbbbbbbb00000bbb000000000bbb00000bbbbbbbbbbbbbbbbbbbbbb00000bbb000000000bbb00000bbbbb
+bbbbbbb333rbbbbbbbb333rbbbbscsrbrsssbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb333rbbbbbbbb333rb
 
 __gff__
 0000000000000000000000000000000000000000000000000000000000000000000000010101010101010101010101010101010001010101010101010101010100000000000000000000000000000000000000000000000000000000000000000000000000010101000000000000000000000101010101000000000000000000

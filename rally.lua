@@ -11,8 +11,8 @@
 
 --== spieler (gelb) ==
 
-bremse=0.03     -- bremsknopf
-rutsch_ab=0.15  -- ab da quietscht
+bremse=0.02     --.3  bremsknopf
+rutsch_ab=0.18  -- ab da quietscht
                 -- es + bremsspur
 -- lenkung: 32 richtungen,
 -- einschlag sammelt sich
@@ -34,22 +34,40 @@ gegner_anpassen=0.025 -- gummi-
                 -- band je feld
 gegner_min=0.85 -- tempo-grenzen
 gegner_max=1.04
-gegner_blick=20 -- px voraus auf
-                -- der ideallinie
-gegner_kurve={0.4,0.4,0.4} -- bremst
-                -- vor kurven je
-                -- belag (trocken/
-                -- nass/eis)
-gegner_toleranz=0.008 -- lenkt ab
-                -- dieser abweichung
-gegner_brems=0.023 -- bremst ab
-                -- dieser abweichung
+-- fahrprofile: 1 = gelb (demo),
+-- 2 = blau (rennen und demo)
+--  blick: px voraus auf der linie
+--  kurve: bremst vor kurven je
+--         belag (trocken/nass/eis)
+--  toleranz: lenkt ab abweichung
+--  brems: bremst ab abweichung
+profil={
+ {blick=24,kurve={0.2,0.4,0.6},toleranz=0.008,brems=0.03},
+ {blick=24,kurve={0.2,0.4,0.6},toleranz=0.008,brems=0.03},
+}
 rempel_abstand=7 -- px
 rempel_stoss=0.2 -- abprall
+-- ueberholen: liegt das andere
+-- auto so weit vorn auf der
+-- linie, schert der computer
+-- seitlich aus (nur auf strasse),
+-- sonst bleibt er dahinter
+ueberhol_abstand=30 -- px
+ueberhol_versatz=8 -- px seitlich
+
+--== windschatten (beide) ==
+windschatten_laenge=40 -- px ab
+                -- heck (3 autos)
+windschatten_breite=8 -- px quer
+                -- bis ganz draussen
+windschatten_max=0.2 -- +20% tempo
+                -- direkt am heck
 
 --== testen ==
 zeige_linie=false -- ideallinie
-nur_blau=false  -- nur blau faehrt
+demo_warten=300 -- frames ruhe im
+                -- menue, dann demo
+                -- (spaeter 1800)
 
 
 --== menue ==
@@ -179,6 +197,7 @@ menue={
  {"tempo","hoechst-tempo",tempo_wahl},
  {"beschl","beschleunigung",{"langsam","normal","schnell"}},
  {"linie","ideallinie",{"aus","an"}},
+ {"demo","zuschauen",nil,"demo"},
  {"info","ueber das spiel",nil,"info"},
 }
 
@@ -188,7 +207,11 @@ function zum_menue()
  menue_zeile=2
  menue_oben=1
  menue_bild=0
+ menue_ruhe=0
  vorschau_fuer=nil
+ -- nach der demo: eigene wahl
+ if (demo) opt=demo
+ demo=nil
 end
 
 function update_menue()
@@ -205,10 +228,15 @@ function update_menue()
  if btnp(4) or btnp(5) then
   if m[3] then
    neues_rennen()
+  elseif m[4]=="demo" then
+   demo_start()
   else
    modus=m[4]
   end
  end
+ -- ruhe im menue -> demo
+ menue_ruhe=btn()>0 and 0 or menue_ruhe+1
+ if (menue_ruhe>demo_warten) demo_start()
  menue_bild+=1
  -- vorschau neu bei anderer
  -- strecke oder belag
@@ -368,15 +396,18 @@ function neues_rennen()
  -- start im startteil (pfeile),
  -- faehrt nach rechts
  local x,y=feld_punkt(kurs[1])
- x-=teil_b\2-12
- auto=new_auto(x,y-6,0.25)
+ x-=teil_b\2+12
+ -- beide gleich weit neben der
+ -- ideallinie
+ y+=welt_dy(linie_y[1]-y)
+ auto=new_auto(x,y-2,0.25)
  auto.vmax=vmax
  gegner=nil
- if nur_blau then
-  auto.vmax=vmax*gegner_tempo
- elseif opt.gegner==2 then
-  gegner=new_auto(x,y+6,0.25)
+ if opt.gegner==2 then
+  gegner=new_auto(x,y+9,0.25)
   gegner.vmax=vmax*gegner_tempo
+  gegner.blau=true
+  gegner.profil=profil[2]
  end
  rennzeit=0
  gestartet=false
@@ -426,10 +457,25 @@ function update_rennen()
   zum_menue()
   return
  end
+ if demo then
+  -- o: kamera zum anderen auto,
+  -- andere taste: menue (erst
+  -- nach einer halben sekunde)
+  if rennzeit>30 then
+   if btnp(4) then
+    auto,gegner=gegner,auto
+    puffer_voll=true
+   elseif btnp()>0 then
+    zum_menue()
+    return
+   end
+  end
+  gestartet=true
+ end
  if not gestartet then
   -- start: irgendeine richtung
   for b=0,3 do
-   if (btn(b) or nur_blau) gestartet=true
+   if (btn(b)) gestartet=true
   end
  else
   rennzeit+=1
@@ -443,7 +489,7 @@ function update_rennen()
    local turn,br=0,btn(4) or btn(5)
    if (btn(0)) turn-=1
    if (btn(1)) turn+=1
-   if (nur_blau) turn,br=ki_eingabe(t)
+   if (demo) turn,br=ki_eingabe(t)
    update_auto(t,turn,br)
    unfall_start(t,pruefe_unfall(t))
    pruefe_kurs(t)
@@ -500,7 +546,7 @@ function update_auto(t,turn,brems)
  -- untergrund; aquaplaning wenn
  -- schnell genug ins wasser
  local b=boden(t.x,t.y)
- local g,vm=grip,vmax
+ local g,vm=grip,vmax*windschatten(t)
  if b==b_wasser then
   if (not t.aqua and not t.wasser_vor and v>=vmax*aqua_ab) t.aqua=true
   if (t.aqua and v<vmax*aqua_ab*0.6) t.aqua=false
@@ -572,6 +618,7 @@ end
 -- tempo brennt er
 function unfall_start(t,sp)
  if (not sp) return
+ t.crashs=(t.crashs or 0)+1
  t.fahrer={x=t.x,y=t.y,i=1,z=0,
   dir=rnd()<0.5 and -1 or 1,
   folge=sp>=t.vmax*brenn_ab
@@ -720,9 +767,9 @@ function draw_rennen()
  local g=gegner
  if g then
   -- blau relativ zu gelb runden
-  draw_wagen(g,flr(t.x)+flr(g.x-t.x+0.5),flr(t.y)+flr(g.y-t.y+0.5),true)
+  draw_wagen(g,flr(t.x)+flr(g.x-t.x+0.5),flr(t.y)+flr(g.y-t.y+0.5))
  end
- draw_wagen(t,t.x,t.y,nur_blau)
+ draw_wagen(t,t.x,t.y)
  draw_gischt()
  draw_rauch()
  draw_regen()
@@ -733,7 +780,8 @@ end
 
 -- auto, beim crash mit feuer
 -- und fahrer
-function draw_wagen(t,x,y,blau)
+function draw_wagen(t,x,y)
+ local blau=t.blau
  if (blau) pal(10,12)
  draw_auto(x,y,t.k/32)
  pal(10,10)
@@ -796,7 +844,7 @@ function update_gegner(g)
   -- gummiband: vorn langsamer,
   -- hinten schneller
   local d=fortschritt(g)-fortschritt(auto)
-  g.vmax=vmax*mid(gegner_min,gegner_tempo-d*gegner_anpassen,gegner_max)
+  g.vmax=vmax*(demo and gegner_tempo or mid(gegner_min,gegner_tempo-d*gegner_anpassen,gegner_max))
   update_auto(g,ki_eingabe(g))
  end
  -- immer nahe am spieler
@@ -809,11 +857,12 @@ function update_gegner(g)
 end
 
 -- computer faehrt: ziel auf der
--- ideallinie gegner_blick
+-- ideallinie profil.blick
 -- voraus, bremst vor kurven.
 -- gibt turn, bremse zurueck
 function ki_eingabe(g)
  local n=#kurs
+ local p=g.profil
  local i0=(g.nxt-3)%n+1
  local pts={}
  for s=0,11 do
@@ -828,13 +877,38 @@ function ki_eingabe(g)
  end
  local z=pts[#pts]
  for k=m,#pts do
-  if pts[k][3]>=gegner_blick then
+  if pts[k][3]>=p.blick then
    z=pts[k] break
+  end
+ end
+ -- anderes auto vorn auf der
+ -- linie: seitlich vorbei, wo
+ -- strasse ist, sonst dahinter
+ -- bleiben
+ local o,halt=g==auto and gegner or auto
+ if o and o.unfall==0 then
+  local dx,dy=welt_dx(o.x-g.x),welt_dy(o.y-g.y)
+  local fx,fy=-sin(g.a),-cos(g.a)
+  local vor,q=dx*fx+dy*fy,dy*fx-dx*fy
+  if vor>-rempel_abstand and vor<ueberhol_abstand and abs(q)<ueberhol_versatz*1.5 then
+   local s,frei=g.seite or q>0 and -1 or 1
+   for k=1,2 do
+    local x,y=z[1]-fy*s*ueberhol_versatz,z[2]+fx*s*ueberhol_versatz
+    if not frei and boden(x,y)==b_strasse and boden((x+g.x)/2,(y+g.y)/2)==b_strasse then
+     z={x,y} frei=s
+    end
+    s=-s
+   end
+   g.seite=frei
+   halt=not frei and vor>0 and g.v>o.v
+  else
+   g.seite=nil
   end
  end
  g.zx,g.zy=z[1],z[2]
  local w=(richtung(g.x,g.y,z[1],z[2])-g.a+0.5)%1-0.5
- local turn=w<-gegner_toleranz and -1 or w>gegner_toleranz and 1 or 0
+ local tol=p.toleranz
+ local turn=w<-tol and -1 or w>tol and 1 or 0
  -- drehung der linie ueber die
  -- naechsten 3 felder
  local dreh,ra=0
@@ -845,8 +919,8 @@ function ki_eingabe(g)
   if (ra) dreh+=abs((r-ra+0.5)%1-0.5)
   ra=r
  end
- local vz=g.vmax*max(0.35,1-dreh*gegner_kurve[opt.strasse])
- return turn,g.v>vz or abs(w)>gegner_brems and g.v>g.vmax*0.5
+ local vz=g.vmax*max(0.35,1-dreh*p.kurve[opt.strasse])
+ return turn,halt or g.v>vz or abs(w)>p.brems and g.v>g.vmax*0.5
 end
 
 -- ideallinie: catmull-rom-kurve
@@ -879,6 +953,19 @@ function abstand()
  if (pa<pg) return rennzeit-(gegner.zb[pa] or rennzeit)
  if (pa>pg) return (auto.zb[pg] or rennzeit)-rennzeit
  return 0
+end
+
+-- windschatten: faktor aufs tempo
+-- hinter dem anderen auto, voll
+-- am heck und genau dahinter
+function windschatten(t)
+ local o=t==auto and gegner or auto
+ if (not o or o.unfall>0 or o.fertig) return 1
+ local dx,dy=welt_dx(t.x-o.x),welt_dy(t.y-o.y)
+ local fx,fy=-sin(o.a),-cos(o.a)
+ local h=-dx*fx-dy*fy
+ if (h<=0) return 1
+ return 1+windschatten_max*mid(0,(rempel_abstand+windschatten_laenge-h)/windschatten_laenge,1)*mid(0,1-abs(dx*fy-dy*fx)/windschatten_breite,1)
 end
 
 -- autos stossen sich ab
@@ -916,11 +1003,40 @@ function gegner_pfeil(g,cx,cy)
  circfill(px,py,1,12)
 end
 
+-- ====== demo ======
+-- beide autos faehrt der
+-- computer, mit den menuewerten
+function demo_start()
+ demo=opt
+ opt={}
+ for k,v in pairs(demo) do opt[k]=v end
+ opt.gegner=2
+ neues_rennen()
+ auto.vmax=vmax*gegner_tempo
+ auto.profil=profil[1]
+ gegner.profil=profil[2]
+end
+
+-- log je rennen (datei im carts-
+-- ordner, rally_log.p8l): fuer
+-- die auswertung von fahrweisen
+function schreibe_log()
+ local ge,bl=auto,gegner
+ if (auto.blau) ge,bl=gegner,auto
+ local function z(t)
+  local s=""
+  for v in all(t.zeiten) do s..=v.."," end
+  return s..(t.crashs or 0)
+ end
+ printh((demo and "demo" or "rennen")..";"..opt.strecke..";"..opt.strasse..";"..tempo_wahl[opt.tempo]..";"..(sieger.blau and "blau" or "gelb")..";"..z(ge)..";"..z(bl),"rally_log")
+end
+
 -- ====== rennende ======
 
 function rennen_ende()
  modus="ergebnis"
  ergebnis_t=0
+ schreibe_log()
  sfx(-1,0) sfx(-1,1)
  sfx(3,2)
 end
@@ -929,13 +1045,15 @@ function update_ergebnis()
  ergebnis_t+=1
  update_rauch()
  if (opt.strasse>1) update_regen()
- if (ergebnis_t>60 and (btnp(4) or btnp(5))) zum_menue()
+ if (ergebnis_t>60 and (btnp(4) or btnp(5)) or demo and ergebnis_t>300) zum_menue()
 end
 
 function draw_ergebnis()
  rectfill(8,22,119,109,0)
  rect(8,22,119,109,7)
- mitte(sieger==auto and "gelb gewinnt!" or "blau gewinnt!",28,sieger==auto and 10 or 12)
+ mitte(sieger.blau and "blau gewinnt!" or "gelb gewinnt!",28,sieger.blau and 12 or 10)
+ local ge,bl=auto,gegner
+ if (auto.blau) ge,bl=gegner,auto
  schrift("runde",14,42,6)
  schrift("gelb",58,42,10)
  schrift("blau",92,42,12)
@@ -943,7 +1061,7 @@ function draw_ergebnis()
  for r=1,opt.runden do
   local y=42+r*7
   schrift(r,22,y,7)
-  local a,b=auto.zeiten[r],gegner.zeiten[r]
+  local a,b=ge.zeiten[r],bl.zeiten[r]
   schrift(a and zeit_text(a) or "-",52,y,7)
   schrift(b and zeit_text(b) or "-",86,y,7)
   sa+=a or 0 sg+=b or 0
@@ -951,8 +1069,8 @@ function draw_ergebnis()
  local y=46+opt.runden*7+4
  line(14,y-2,113,y-2,5)
  schrift("summe",14,y+1,6)
- schrift(#auto.zeiten>=opt.runden and zeit_text(sa) or "-",52,y+1,7)
- schrift(#gegner.zeiten>=opt.runden and zeit_text(sg) or "-",86,y+1,7)
+ schrift(#ge.zeiten>=opt.runden and zeit_text(sa) or "-",52,y+1,7)
+ schrift(#bl.zeiten>=opt.runden and zeit_text(sg) or "-",86,y+1,7)
  if (ergebnis_t>60 and t()%1<0.6) mitte("\151/\142 = menue",102,7)
 end
 
@@ -1119,7 +1237,7 @@ function draw_linie(test)
   end
   if (test) pset(t.x+welt_dx(linie_x[i]-t.x),t.y+welt_dy(linie_y[i]-t.y),8)
  end
- local z=nur_blau and auto or gegner
+ local z=gegner
  if (test and z and z.zx) circ(z.zx,z.zy,1,8)
 end
 -->8
