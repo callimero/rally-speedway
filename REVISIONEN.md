@@ -259,7 +259,7 @@ Kamera + Unfall, Effekte + Ton, Testen. Die Werte sind unverändert.
 - **Ergebnis:** 7161 → 6936 Tokens (225 gespart). Das Verhalten ist
   unverändert (gleiche Rundenzeiten im Testrennen).
 
-## Demo-Modus, Fahrprofile, Log (2026-10-22)
+## Demo-Modus, Fahrprofile, Log – rally_v7.p8 (2026-10-22/23)
 
 - **Demo (Attract Mode):** nach `demo_warten` Frames Ruhe im Menü
   (zum Testen 300 = 5 s, später 1800 = 30 s) oder über den Menüpunkt
