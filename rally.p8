@@ -35,7 +35,7 @@ lenk_rueck=0.05 -- einschlag zurueck
 gegner_tempo=1.0 -- grundtempo
 gegner_anpassen=0.025 -- gummi-
                 -- band je feld
-gegner_min=0.89 -- tempo-grenzen
+gegner_min=0.85 -- tempo-grenzen
 gegner_max=1.04
 -- fahrprofile: 1 = gelb (demo),
 -- 2 = blau (rennen und demo)
@@ -46,7 +46,7 @@ gegner_max=1.04
 --  brems: bremst ab abweichung
 profil={
  {blick=24,kurve={0.2,0.4,0.6},toleranz=0.008,brems=0.03},
- {blick=24,kurve={0.2,0.4,0.6},toleranz=0.008,brems=0.03},
+ {blick=24,kurve={0.2,0.3,0.7},toleranz=0.01 ,brems=0.0124},
 }
 rempel_abstand=7 -- px
 rempel_stoss=0.2 -- abprall
@@ -212,7 +212,7 @@ menue={
  {"gegner","gegner",{"nein","ja"}},
  {"runden","runden",{1,2,3,4,5,6}},
  {"strasse","strasse",{"trocken","nass","eis"}},
- {"tempo","hoechst-tempo",tempo_wahl},
+ {"tempo","max. tempo",tempo_wahl},
  {"beschl","beschleunigung",{"langsam","normal","schnell"}},
  {"linie","ideallinie",{"aus","an"}},
  {"demo","zuschauen",nil,"demo"},
