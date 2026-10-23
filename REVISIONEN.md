@@ -305,5 +305,24 @@ Kamera + Unfall, Effekte + Ton, Testen. Die Werte sind unverändert.
   (still). Das Rempel-Geräusch läuft jetzt auf Kanal 2.
 - **Tokens:** 7563 → 7734.
 - **Demo:** Nach Ruhe im Menü eine Runde auf zufälliger Strecke mit
-  zufälligem Belag (`demo_zufall=false`: Menüwerte). Der Menüpunkt
+  zufälligem Belag und Tempo (80/100/120 mph) (`demo_zufall=false`: Menüwerte). Der Menüpunkt
   „zuschauen“ fährt genau die eingestellten Werte, auch die Runden.
+
+## Computer: Überholen und Kurventempo überarbeitet (2026-10-23)
+
+Auswertung von 90 Demo-Rennen plus Messung am Start (Strecke 5 und 6):
+
+- **Nebeneinander** wollten beide Autos überholen und wichen sich aus; wurde
+  es eng, wechselte Blau die Seite quer vor Gelb (Crash in der Engstelle von
+  Strecke 6). Das Windschatten-Suchen zielte sogar auf ein Auto direkt
+  daneben. Jetzt: beide Seiten nur, wenn er klar (eine Autolänge) dahinter
+  liegt; nebeneinander oder beim Überholen bleibt er auf seiner Seite, ist
+  sie zu, bremst er und reiht sich ein. Windschatten suchen erst ab einer
+  Autolänge Abstand.
+- **Straße frei** wird jetzt am Ziel, auf halbem Weg und zwei Felder weiter
+  geprüft (vorher nur am Ziel: zu spät bei Tempo).
+- **Kurventempo unabhängig vom Höchsttempo:** vorher Anteil von `vmax`, bei
+  150 mph also viel zu schnell. Jetzt gelten die `kurve`-Werte bei
+  `ki_ref_mph` (80), schneller fährt der Computer in Kurven nie. Über dem
+  Bezugstempo schaut er je 0,5 px/Frame ein Feld weiter voraus (Bremsweg).
+  Bei 60 mph bremst er dadurch etwas weniger als vorher.

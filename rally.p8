@@ -63,6 +63,11 @@ ueberhol_versatz=8 -- px seitlich
 -- einer kurve (drehung der linie
 -- ueber ki_gerade) schert er aus
 ki_gerade=0.06
+-- kurventempo: die kurve-werte der
+-- profile gelten bei diesem tempo,
+-- in kurven faehrt der computer
+-- nie schneller (auch bei 150 mph)
+ki_ref_mph=80
 
 --== windschatten (beide) ==
 windschatten_laenge=100 -- px ab
@@ -83,8 +88,9 @@ zeige_linie=false -- ideallinie
 demo_warten=600 -- frames ruhe im
                 -- menue, dann demo
 demo_zufall=true -- demo nach ruhe:
-                -- zufaellige strecke
-                -- + belag, false =
+                -- zufaellige strecke,
+                -- belag und tempo
+                -- (80-120), false =
                 -- menuewerte
 
 
@@ -889,16 +895,18 @@ function ki_eingabe(g)
  for k=2,#pts do
   if (pts[k][3]<pts[m][3]) m=k
  end
- local z=pts[#pts]
+ local z,zk=pts[#pts],#pts
  for k=m,#pts do
   if pts[k][3]>=p.blick then
-   z=pts[k] break
+   z,zk=pts[k],k break
   end
  end
  -- drehung der linie ueber die
- -- naechsten 3 felder
+ -- naechsten 3 felder, ueber dem
+ -- bezugstempo je 0.5 px/frame
+ -- ein feld mehr (bremsweg)
  local dreh,ra=0
- for s=0,3 do
+ for s=0,3+max(0,g.v-ki_ref_mph*px_mph)\0.5 do
   local i=(g.nxt-2+s)%n+1
   local j=i%n+1
   local r=richtung(0,0,welt_dx(linie_x[j]-linie_x[i]),welt_dy(linie_y[j]-linie_y[i]))
@@ -917,26 +925,34 @@ function ki_eingabe(g)
   local vor,q=dx*fx+dy*fy,dy*fx-dx*fy
   local ws=vor>0 and vor<rempel_abstand+windschatten_laenge
   if vor>-rempel_abstand and (vor<ueberhol_abstand or ws and dreh>ki_gerade) and abs(q)<ueberhol_versatz*1.5 then
+   -- nebeneinander oder schon beim
+   -- ueberholen: nur die eigene
+   -- seite, nie quer vor dem anderen
+   -- vorbei. klar dahinter: beide.
+   -- strasse frei am ziel, auf dem
+   -- weg und zwei felder weiter (f)
    local s,frei=g.seite or q>0 and -1 or 1
-   for k=1,2 do
+   local f=pts[min(zk+8,#pts)]
+   for k=1,(g.seite or vor<rempel_abstand) and 1 or 2 do
     local x,y=z[1]-fy*s*ueberhol_versatz,z[2]+fx*s*ueberhol_versatz
-    if not frei and boden(x,y)==b_strasse and boden((x+g.x)/2,(y+g.y)/2)==b_strasse then
+    if not frei and boden(x,y)==b_strasse and boden((x+g.x)/2,(y+g.y)/2)==b_strasse and boden(f[1]-fy*s*ueberhol_versatz,f[2]+fx*s*ueberhol_versatz)==b_strasse then
      z={x,y} frei=s
     end
     s=-s
    end
    g.seite=frei
-   halt=not frei and vor>0 and g.v>o.v
+   -- kein platz: einreihen
+   halt=not frei and vor>0 and (vor<rempel_abstand or g.v>o.v)
   else
    g.seite=nil
-   if (ws and abs(q)<windschatten_breite*2 and boden(g.x+dx/2,g.y+dy/2)==b_strasse) z={g.x+dx,g.y+dy}
+   if (ws and vor>rempel_abstand and abs(q)<windschatten_breite*2 and boden(g.x+dx/2,g.y+dy/2)==b_strasse) z={g.x+dx,g.y+dy}
   end
  end
  g.zx,g.zy=z[1],z[2]
  local w=(richtung(g.x,g.y,z[1],z[2])-g.a+0.5)%1-0.5
  local tol=p.toleranz
  local turn=w<-tol and -1 or w>tol and 1 or 0
- local vz=g.vmax*max(0.35,1-dreh*p.kurve[opt.strasse])
+ local vz=min(g.vmax,ki_ref_mph*px_mph*max(0.35,1-dreh*p.kurve[opt.strasse]))
  return turn,halt or g.v>vz or abs(w)>p.brems and g.v>g.vmax*0.5
 end
 
@@ -1034,12 +1050,14 @@ function demo_start(zufall)
  for k,v in pairs(demo) do opt[k]=v end
  opt.gegner=2
  -- nach ruhe im menue: eine runde,
- -- zufaellige strecke + belag
+ -- zufaellige strecke, belag, tempo
  if zufall then
   opt.runden=1
   if demo_zufall then
    opt.strecke=flr(rnd(6))+1
    opt.strasse=flr(rnd(3))+1
+   -- 80, 100 oder 120 mph
+   opt.tempo=flr(rnd(3))+2
   end
  end
  neues_rennen()
@@ -1658,22 +1676,22 @@ bbbbbbbbbbbbbbbb666666666666666666666666666666668888777777778888bbbbbbbb77666666
 bbbbbbbbbbbbbbbb666666666666666666666666666666668888777777778888bbbbbbbb7766666666666688bbbb77666688bbbbb77666666666688bbbb77666
 bbbbbbbbbbbbbbbb66666666666666668888777766666666bbbbbbbb66666666bbbbbbbb7766666666666688bbbb77666688bbbbbb77666666666688bbbb7766
 bbbbbbbbbbbbbbbb66666666666666668888777766666666bbbbbbbb66666666bbbbbbbb7766666666666688bbbb77666688bbbbbb77666666666688bbbb7766
-6677bbbbbbbb88667bbbbbbbbbbb888877bbbbbb6666666666666666bbbbbbbbbbbbbbbb6666666666666666bbbbbbbbbbbbbbbb8866666666667777bbbbbb88
-6677bbbbbbbb88667bbbbbbbbb7788887777bbbb6666666666666666bbbbbbbbbbbbbbbb6666666666666666bbbbbbbbbbbbbbbb8888666666887777bbbbbb88
+6677bbbbbbbb886677bbbbbbbbbb888877bbbbbb6666666666666666bbbbbbbbbbbbbbbb6666666666666666bbbbbbbbbbbbbbbb8866666666667777bbbbbb88
+6677bbbbbbbb886677bbbbbbbb7788887777bbbb6666666666666666bbbbbbbbbbbbbbbb6666666666666666bbbbbbbbbbbbbbbb8888666666887777bbbbbb88
 6677bbbbbbbbb88677bbbbbb77776666667788886666666666666666bbbb888877bbbbbb7766666666667777bbbbbbbbbbbbbbbbbb8877778888bbbbbbbb8866
 6677bbbbbbbbb88677bbbbbb77666666666688886666666666666666bb7788887777bbbb7777666666887777bbbbbbbbbbbbbbbbbbbb777788bbbbbbbbbb8866
 66688bbbbbbbbb77688bbbbb666666666666666688666666666677777777666666778888bb7788888888bbbbbbbb888877bbbbbbbbbbbbbbbbbbbbbbbb776666
 66688bbbbbbbbb77688bbbbb666666666666666688886666668877777766666666668888bbbb888888bbbbbbbb7788887777bbbbbbbbbbbbbbbbbbbbbb776666
-666688bbbbbbbbb76688bbbb6666666666666666bb8877778888bbbb6666666666666666bbbbbbbbbbbbbbbb7777666666778888bbbbbbbbbbbbbbbb77666666
-666688bbbbbbbbb76688bbbb6666666666666666bbbb777788bbbbbb6666666666666666bbbbbbbbbbbbbbbb7766666666668888bbbbbbbbbbbbbbbb77666666
-77bbbbbb77666666666666778888888888888822228888888822888888888888888888888888882288888888882288888822888888882288888888bb888888bb
-77bbbbbb77666666666666778888888888888822228888888822888888888888888888888888882288888888882288888822888888882288888888bb888888bb
-6677bbbbbb776666666677bb8888888888882288882288888888228888888888888888888888888822888888882288888822888888228888888888bb228888bb
-6677bbbbbb776666666677bb8888888888882288882288888888228888888888888888888888888822888888882288888822888888228888888888bb228888bb
-666688bbbbbb88666688bbbb8888888888228888888822888888882288888888888888888888888888228888882288888822888888222288888888bb882288bb
-666688bbbbbb88666688bbbb8888888888228888888822888888882288888888888888888888888888228888882288888822888888222288888888bb882288bb
-66666688bbbbbb8888bbbbbb8888888822888888888888228888888822888888222222228888888888882288882288882288228888228822888888bb888822bb
-66666688bbbbbb8888bbbbbb8888888822888888888888228888888822888888222222228888888888882288882288882288228888228822888888bb888822bb
+666688bbbbbbbb776688bbbb6666666666666666bb8877778888bbbb6666666666666666bbbbbbbbbbbbbbbb7777666666778888bbbbbbbbbbbbbbbb77666666
+666688bbbbbbbb776688bbbb6666666666666666bbbb777788bbbbbb6666666666666666bbbbbbbbbbbbbbbb7766666666668888bbbbbbbbbbbbbbbb77666666
+77bbbbbb88666666666666778888888888888822228888888822888888888888888888888888882288888888882288888822888888882288888888bb888888bb
+77bbbbbb88666666666666778888888888888822228888888822888888888888888888888888882288888888882288888822888888882288888888bb888888bb
+6677bbbbbb886666666677bb8888888888882288882288888888228888888888888888888888888822888888882288888822888888228888888888bb228888bb
+6677bbbbbb886666666677bb8888888888882288882288888888228888888888888888888888888822888888882288888822888888228888888888bb228888bb
+666688bbbbbb77666688bbbb8888888888228888888822888888882288888888888888888888888888228888882288888822888888222288888888bb882288bb
+666688bbbbbb77666688bbbb8888888888228888888822888888882288888888888888888888888888228888882288888822888888222288888888bb882288bb
+66666688bbbbbb7788bbbbbb8888888822888888888888228888888822888888222222228888888888882288882288882288228888228822888888bb888822bb
+66666688bbbbbb7788bbbbbb8888888822888888888888228888888822888888222222228888888888882288882288882288228888228822888888bb888822bb
 22888888888888888822888811111111bb222222222222bbbbbbbbbbbbbb2222222222222222bbbbbbbbbbbbbb22222222111111111111222211111111111122
 22888888888888888822888811111111bb222222222222bbbbbbbbbbbbbb2222222222222222bbbbbbbbbbbbbb22222222111111111111222211111111111122
 88228888888888888888228811111111bb222222222222bbbbbbbb2222222222222222222222222222bbbbbbbbbb222222221111111111222211111111112222

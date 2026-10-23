@@ -60,6 +60,11 @@ ueberhol_versatz=8 -- px seitlich
 -- einer kurve (drehung der linie
 -- ueber ki_gerade) schert er aus
 ki_gerade=0.06
+-- kurventempo: die kurve-werte der
+-- profile gelten bei diesem tempo,
+-- in kurven faehrt der computer
+-- nie schneller (auch bei 150 mph)
+ki_ref_mph=80
 
 --== windschatten (beide) ==
 windschatten_laenge=100 -- px ab
@@ -80,8 +85,9 @@ zeige_linie=false -- ideallinie
 demo_warten=600 -- frames ruhe im
                 -- menue, dann demo
 demo_zufall=true -- demo nach ruhe:
-                -- zufaellige strecke
-                -- + belag, false =
+                -- zufaellige strecke,
+                -- belag und tempo
+                -- (80-120), false =
                 -- menuewerte
 
 
@@ -886,16 +892,18 @@ function ki_eingabe(g)
  for k=2,#pts do
   if (pts[k][3]<pts[m][3]) m=k
  end
- local z=pts[#pts]
+ local z,zk=pts[#pts],#pts
  for k=m,#pts do
   if pts[k][3]>=p.blick then
-   z=pts[k] break
+   z,zk=pts[k],k break
   end
  end
  -- drehung der linie ueber die
- -- naechsten 3 felder
+ -- naechsten 3 felder, ueber dem
+ -- bezugstempo je 0.5 px/frame
+ -- ein feld mehr (bremsweg)
  local dreh,ra=0
- for s=0,3 do
+ for s=0,3+max(0,g.v-ki_ref_mph*px_mph)\0.5 do
   local i=(g.nxt-2+s)%n+1
   local j=i%n+1
   local r=richtung(0,0,welt_dx(linie_x[j]-linie_x[i]),welt_dy(linie_y[j]-linie_y[i]))
@@ -914,26 +922,34 @@ function ki_eingabe(g)
   local vor,q=dx*fx+dy*fy,dy*fx-dx*fy
   local ws=vor>0 and vor<rempel_abstand+windschatten_laenge
   if vor>-rempel_abstand and (vor<ueberhol_abstand or ws and dreh>ki_gerade) and abs(q)<ueberhol_versatz*1.5 then
+   -- nebeneinander oder schon beim
+   -- ueberholen: nur die eigene
+   -- seite, nie quer vor dem anderen
+   -- vorbei. klar dahinter: beide.
+   -- strasse frei am ziel, auf dem
+   -- weg und zwei felder weiter (f)
    local s,frei=g.seite or q>0 and -1 or 1
-   for k=1,2 do
+   local f=pts[min(zk+8,#pts)]
+   for k=1,(g.seite or vor<rempel_abstand) and 1 or 2 do
     local x,y=z[1]-fy*s*ueberhol_versatz,z[2]+fx*s*ueberhol_versatz
-    if not frei and boden(x,y)==b_strasse and boden((x+g.x)/2,(y+g.y)/2)==b_strasse then
+    if not frei and boden(x,y)==b_strasse and boden((x+g.x)/2,(y+g.y)/2)==b_strasse and boden(f[1]-fy*s*ueberhol_versatz,f[2]+fx*s*ueberhol_versatz)==b_strasse then
      z={x,y} frei=s
     end
     s=-s
    end
    g.seite=frei
-   halt=not frei and vor>0 and g.v>o.v
+   -- kein platz: einreihen
+   halt=not frei and vor>0 and (vor<rempel_abstand or g.v>o.v)
   else
    g.seite=nil
-   if (ws and abs(q)<windschatten_breite*2 and boden(g.x+dx/2,g.y+dy/2)==b_strasse) z={g.x+dx,g.y+dy}
+   if (ws and vor>rempel_abstand and abs(q)<windschatten_breite*2 and boden(g.x+dx/2,g.y+dy/2)==b_strasse) z={g.x+dx,g.y+dy}
   end
  end
  g.zx,g.zy=z[1],z[2]
  local w=(richtung(g.x,g.y,z[1],z[2])-g.a+0.5)%1-0.5
  local tol=p.toleranz
  local turn=w<-tol and -1 or w>tol and 1 or 0
- local vz=g.vmax*max(0.35,1-dreh*p.kurve[opt.strasse])
+ local vz=min(g.vmax,ki_ref_mph*px_mph*max(0.35,1-dreh*p.kurve[opt.strasse]))
  return turn,halt or g.v>vz or abs(w)>p.brems and g.v>g.vmax*0.5
 end
 
@@ -1031,12 +1047,14 @@ function demo_start(zufall)
  for k,v in pairs(demo) do opt[k]=v end
  opt.gegner=2
  -- nach ruhe im menue: eine runde,
- -- zufaellige strecke + belag
+ -- zufaellige strecke, belag, tempo
  if zufall then
   opt.runden=1
   if demo_zufall then
    opt.strecke=flr(rnd(6))+1
    opt.strasse=flr(rnd(3))+1
+   -- 80, 100 oder 120 mph
+   opt.tempo=flr(rnd(3))+2
   end
  end
  neues_rennen()
