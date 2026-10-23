@@ -40,7 +40,11 @@ Geordnet so, dass das Wichtigste vorn steht:
 4. **Umgebung**: Gelände (Gras, Wasser, Busch, Aquaplaning), Farben je
    Belag, Regen (nass), Schnee (Eis)
 5. **Kamera + Unfall**
-6. **Testen**: `zeige_linie`, `nur_blau` (steht hinter Blau)
+   Windschatten (`windschatten_*`) steht als eigener Block hinter Blau.
+6. **Testen**: `zeige_linie`, `demo_warten`, `demo_zufall` – steht hinter Blau
+
+Die Fahrwerte der Computer-Fahrer stehen bei Blau in `profil`:
+`profil[1]` = Gelb (Demo), `profil[2]` = Blau (Rennen und Demo). Felder: `blick`, `kurve` (je Belag), `toleranz`, `brems`.
 
 Effekt-Werte (Rauch, Spuren, Farben, Motorton) stehen fest im Code, siehe
 „Fest eingebaute Werte“.
@@ -91,9 +95,9 @@ Funktion nach dem Wert.
 | `bremsspur_ab` | `0.5` | `update_auto` | Bremsspur beim Bremsen erst ab diesem Tempo |
 | `gischt_menge` | `0.5` | `spritzen` | Chance je Frame und Rad auf Spritzwasser |
 | `regen_spritz` | `6` | `update_regen` | Frames, die ein Regentropfen nach dem Aufschlag weiß bleibt |
-| `motor_min` | `3` | `update_ton` | Tonhöhe des Motors im Stand |
-| `motor_max` | `32` | `update_ton` | Tonhöhe bei Höchsttempo |
-| `motor_kurve` | `0.7` | `update_ton` | Kurve der Tonhöhe (<1: erst schnell, dann flacher) |
+| `motor_min` | `3` | `motor` | Tonhöhe des Motors im Stand |
+| `motor_max` | `32` | `motor` | Tonhöhe bei Höchsttempo |
+| `motor_kurve` | `0.7` | `motor` | Kurve der Tonhöhe (<1: erst schnell, dann flacher) |
 
 ## Ablauf
 
@@ -101,6 +105,7 @@ Funktion nach dem Wert.
 
 ```
 "hilfe" / "info" <──❎/🅾️ auf "steuerung/hilfe" / "ueber das spiel"──> "menue"
+"menue" ──ruhe (demo_warten) / "zuschauen"──> "rennen" mit demo=opt (beide computer)
 "menue" ──❎/🅾️──> "rennen" ──beide im ziel (mit blau)──> "ergebnis"
    ^                 │  ⬇️+🅾️ / pausenmenue              │ ❎/🅾️
    └─────────────────┴──────────────────────────────────┘
@@ -117,8 +122,8 @@ Ein Frame im Rennen (`update_rennen`):
      `im_ziel` lässt das Auto ausrollen, der Fahrer steigt aus und winkt.
      Sind beide ausgestiegen, folgt nach `ziel_winken` Frames
      `rennen_ende`.
-5. Rauch, Spritzwasser, Kamera, Ton. Der Motor ist aus, solange Gelb brennt
-   oder ausgestiegen ist (`motor_an`).
+5. Rauch, Spritzwasser, Kamera, Ton. Je Auto ein Motor (`motor`), aus solange das Auto brennt
+   oder der Fahrer ausgestiegen ist (`t.motor`). Kanäle: 0 Motor, 1 Quietschen, 2 Crash/Runde/Rempeln, 3 Motor des anderen Autos.
 
 Zeichnen (`draw_rennen`): Welt-Puffer nachziehen → auf den Schirm kopieren →
 Bremsspuren → (Ideallinie) → Blau → Gelb → Spritzwasser → Rauch → Anzeige.
@@ -203,7 +208,7 @@ Gelb (`auto`) und Blau (`gegner`) sind Tabellen gleicher Form (`new_auto`):
   Bremse.
 - **Ideallinie**: `original.py` berechnet sie offline (geglättete Linie mit
   7 px Randabstand) und speichert pro Kursfeld einen Punkt. `linie_punkt`
-  legt eine Catmull-Rom-Kurve durch diese Punkte; Blau zielt `gegner_blick`
+  legt eine Catmull-Rom-Kurve durch diese Punkte; Blau zielt `profil.blick`
   Pixel voraus auf die Kurve.
 - **Kurvenbremse**: Drehung der Linie über die nächsten Felder →
   Zieltempo.
@@ -230,7 +235,7 @@ setzt es ins letzte Kursfeld. Für Gelb und Blau gilt dasselbe.
 | übrige Sprites 1–127, 224–255 | C64-Zeichen (Randsteine von callimero gemalt) |
 | Sprites 128–223 | belegt durch Map-Zeilen 32–55 – **nicht bemalen** |
 | Map-Zeilen 0–55 | die 28 Teile als Zeichen-Raster |
-| SFX 0–4 | Motor, Quietschen, Crash, Runde, Rempeln (5–7 frei) |
+| SFX 0–5 | Motor, Quietschen, Crash, Runde, Rempeln; 5 = Laufzeit-Kopie von 0 für das andere Auto (6–7 frei) |
 | SFX 8–63 | **Streckendaten** (Raster + Ideallinie als Bitstrom) – nicht ändern |
 | `0x8000`, `0xA000` | Welt-Puffer (gerade/ungerade) |
 | `0xC000` | Streckenkarte im Menü |

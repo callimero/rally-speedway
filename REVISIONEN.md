@@ -258,3 +258,52 @@ Kamera + Unfall, Effekte + Ton, Testen. Die Werte sind unverändert.
 - **`welt_rum`** verschiebt Rauch, Spritzwasser und Regen in einer Schleife.
 - **Ergebnis:** 7161 → 6936 Tokens (225 gespart). Das Verhalten ist
   unverändert (gleiche Rundenzeiten im Testrennen).
+
+## Demo-Modus, Fahrprofile, Log (2026-10-22)
+
+- **Demo (Attract Mode):** nach `demo_warten` Frames Ruhe im Menü
+  (zum Testen 300 = 5 s, später 1800 = 30 s) oder über den Menüpunkt
+  „zuschauen“.
+  - Beide Autos fahren computergesteuert, mit den Menüwerten (Strecke,
+    Belag, mph, Runden, Beschleunigung), ohne Gummiband.
+  - 🅾️ schaltet die Kamera zum anderen Auto, eine andere Taste führt ins
+    Menü. Nach der Ergebnistafel geht es von selbst zurück, die eigenen
+    Menüwerte sind wiederhergestellt.
+  - Dafür tauschen `auto` und `gegner` die Rolle, die Farbe hängt am Auto
+    (`t.blau`).
+- **Fahrprofile** ersetzen `gegner_blick`, `gegner_kurve`,
+  `gegner_toleranz` und `gegner_brems`: `profil[1]` = Gelb (Demo),
+  `profil[2]` = Blau (Rennen und Demo).
+  Jedes Profil hat `blick`, `kurve` (je Belag), `toleranz`, `brems`.
+- **Log:** Nach jedem Rennen mit Gegner (auch in der Demo) schreibt das Spiel
+  eine Zeile in `rally_log.p8l` im carts-Ordner. Format:
+  `modus;strecke;belag;mph;sieger;rundenzeiten gelb,...,crashs;rundenzeiten blau,...,crashs`
+  (Zeiten in Frames, 60 = 1 s).
+- **`nur_blau` entfernt**, die Demo ersetzt es.
+- **Startaufstellung:** beide Autos stehen gleich weit neben der
+  Ideallinie (vorher stand Gelb 2 px vom oberen Rand, Blau fast auf der
+  Linie).
+- **Windschatten** (beide Autos): bis `windschatten_laenge` px hinter dem
+  Heck des anderen steigt die Höchstgeschwindigkeit linear bis auf
+  `1+windschatten_max` am Heck; seitlich fällt der Effekt linear bis
+  `windschatten_breite` px auf 0.
+- **Überholen (Computer):** liegt das andere Auto bis `ueberhol_abstand` px
+  vorn auf der Linie, zielt der Computer `ueberhol_versatz` px daneben –
+  nur wenn dort Straße ist. Sonst bleibt er dahinter und bremst, wenn er
+  schneller ist.
+- **Tokens:** 6936 → 7542.
+- **Aufhol-Bonus** (`hinten_bonus`, beide Autos): wer nach Kursfeldern
+  hinten liegt, darf 10 % schneller fahren („mehr Drehzahl“). Leichter
+  aufholen, aber mehr Risiko in Kurven. Bei Blau kommt das Gummiband dazu.
+- **Demo** startet nach 10 s Ruhe im Menü (`demo_warten=600`).
+- **Computer sucht Windschatten:** liegt das andere Auto im Windschatten-
+  Bereich vor ihm, zielt er auf der Geraden direkt dahinter. Dreht die
+  Linie voraus stärker als `ki_gerade` (Kurve kommt), schert er schon dort
+  zum Überholen aus, sonst erst bei `ueberhol_abstand`.
+- **Motor des anderen Autos hörbar:** Kopie von SFX 0 in SFX 5 auf Kanal 3,
+  `ton2_tiefer` Halbtöne tiefer, leiser mit dem Abstand bis `ton2_weite` px
+  (still). Das Rempel-Geräusch läuft jetzt auf Kanal 2.
+- **Tokens:** 7563 → 7734.
+- **Demo:** Nach Ruhe im Menü eine Runde auf zufälliger Strecke mit
+  zufälligem Belag (`demo_zufall=false`: Menüwerte). Der Menüpunkt
+  „zuschauen“ fährt genau die eingestellten Werte, auch die Runden.

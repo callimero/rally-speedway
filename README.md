@@ -15,14 +15,27 @@ zu optimieren.
 
 ![Rally Speedway](rally.p8.png)
 
+![Regenrennen gegen Blau](bilder/regenrennen.gif)
+
 ## Spiel
 
 - Die 6 Original-Strecken, ringsum geschlossene Welt, Verengungen inklusive
 - Gas gibt der Wagen von selbst – der Knopf **bremst** nur
 - Lenken wie ein RC-Car: links/rechts relativ zur Fahrtrichtung, 32 Richtungen
-- Rutschen, Bremsspuren, nasse und vereiste Straße, Aquaplaning (für Profis)
+- Rutschen, Bremsspuren, Aquaplaning (für Profis)
+- Drei Beläge: **trocken**, **nass** mit Regen, **Eis** mit Schnee und
+  Winterlandschaft
 - Crash: Feuer, der Fahrer springt raus, brennt, wälzt sich und schimpft
-- Computergegner **Blau** auf der Ideallinie, 1–6 Runden, Abstand in Sekunden
+- Computergegner **Blau** auf der Ideallinie: nutzt den Windschatten,
+  überholt, 1–6 Runden, Abstand in Sekunden
+- **Windschatten** und Aufhol-Bonus für den, der hinten liegt – für Mensch
+  und Computer
+- **Zuschauen:** Beide Autos fährt der Computer, nach 10 s Ruhe im Menü
+  startet die Demo von selbst
+
+| trocken | nass | Eis |
+|---|---|---|
+| ![trocken](bilder/trocken.png) | ![Regen](bilder/regen.png) | ![Schnee](bilder/schnee.png) |
 
 ## Grafik
 
@@ -53,15 +66,32 @@ die quadratischen PICO-8-Pixel verlor zu viele Details.
 **Neu oder anders**
 
 - **Computergegner „Blau“:** Er fährt auf einer berechneten Ideallinie und
-  passt sein Tempo an deines an (Gummiband), eher ein Trainingspartner als ein
-  Gegner. Dazu kommen 3 Runden mit Ergebnis-Bildschirm und der Abstand in
-  Sekunden oben rechts.
+  passt sein Tempo an deines an (Gummiband). Auf der Geraden hängt er sich
+  in den Windschatten, vor Kurven oder wenn er nah dran ist schert er zum
+  Überholen aus – aber nur, wo Straße ist. Dazu kommen Runden mit
+  Ergebnis-Bildschirm und der Abstand in Sekunden oben rechts.
+
+  ![Ergebnis](bilder/auswertung.png)
+- **Windschatten:** Hinter dem anderen Auto steigt das Höchsttempo, am
+  stärksten direkt am Heck und genau dahinter.
+- **Aufhol-Bonus:** Wer hinten liegt, darf seinem Motor mehr Drehzahl
+  abverlangen – leichter aufholen, aber mehr Risiko in den Kurven.
+- **Demo / Zuschauen:** Der Menüpunkt „zuschauen“ lässt beide Autos vom
+  Computer fahren, mit den eingestellten Werten. Nach 10 s Ruhe im Menü
+  startet die Demo von selbst, eine Runde auf zufälliger Strecke. 🅾️
+  wechselt die Kamera zum anderen Auto, jede andere Taste führt zurück.
+- **Ideallinie** als Menü-Option zum Einblenden.
 - **Streckenvorschau** im Menü, mit dem Kurs als Linie.
 - **Effekte:**
   - Reifenspuren beim Rutschen und Bremsen
   - Rauch über brennendem Auto und Fahrer
   - Spritzwasser bei Nässe und beim Aquaplaning
   - Abprall mit Knall, wenn sich die Autos berühren
+  - Regen bei Nässe: Tropfen mit Wind aus Nordwest, beim Fahren aus der
+    Fahrtrichtung, kurzer Aufschlag auf der Straße
+  - Schneefall bei Eis, dazu weiße Wiesen und Büsche
+  - der Motor des anderen Autos ist zu hören, tiefer und leiser mit dem
+    Abstand
 - **Fahrphysik:**
   - langsam durch Büsche fahren geht ohne Crash
   - Aquaplaning über kurze Wasserstücke
@@ -72,7 +102,8 @@ die quadratischen PICO-8-Pixel verlor zu viele Details.
   - eigenes Feuer
   - Fahrer mit Overall, Helm und Schuhen, bei Gelb mit gelbem Overall
   - dunkelgrüne Pflanzen statt rot-rosa Büschen
-  - die Straße wechselt die Farbe bei Nässe und Eis
+  - die Straße wechselt die Farbe bei Nässe und Eis, bei Eis wird die
+    ganze Landschaft winterlich
 - **Bildausschnitt:**
   - Die Kamera schaut in Fahrtrichtung voraus.
   - Durch 128 × 128 Pixel ist der Ausschnitt etwas schmaler und dafür höher
@@ -95,6 +126,7 @@ die quadratischen PICO-8-Pixel verlor zu viele Details.
 | 🅾️ / ❎ | bremsen |
 | beliebige Richtung | Start |
 | ⬇️ + 🅾️ | zurück ins Menü |
+| 🅾️ (Demo) | Kamera zum anderen Auto |
 
 Im Menü gibt es unter „steuerung/hilfe“ eine Hilfeseite.
 
@@ -111,6 +143,7 @@ werden erkannt.
 | `rally.lua` | der Quellcode zum Lesen |
 | `STRUKTUR.md` | Aufbau des Programms (Tabs, Ablauf, Physik, Welt, Speicher) |
 | `REVISIONEN.md` | Entstehung und Begründungen, Version für Version |
+| `bilder/` | Screenshots für diese Seite |
 
 Die Streckendaten (Raster und Ideallinie) liegen als Bitstrom im
 Sound-Speicher (SFX 8–63) der Cart, nicht im Quellcode.

@@ -82,9 +82,10 @@ hinten_bonus=0.25 -- +25% tempo fuer
 zeige_linie=false -- ideallinie
 demo_warten=600 -- frames ruhe im
                 -- menue, dann demo
-demo_zufall=true -- demo: zufaellige
-                -- strecke + belag,
-                -- false = menuewerte
+demo_zufall=true -- demo nach ruhe:
+                -- zufaellige strecke
+                -- + belag, false =
+                -- menuewerte
 
 
 --== menue ==
@@ -253,7 +254,7 @@ function update_menue()
  end
  -- ruhe im menue -> demo
  menue_ruhe=btn()>0 and 0 or menue_ruhe+1
- if (menue_ruhe>demo_warten) demo_start()
+ if (menue_ruhe>demo_warten) demo_start(true)
  menue_bild+=1
  -- vorschau neu bei anderer
  -- strecke oder belag
@@ -1025,16 +1026,21 @@ end
 
 -- ====== demo ======
 -- beide autos faehrt der
--- computer, eine runde
-function demo_start()
+-- computer. "zuschauen" faehrt
+-- genau die menuewerte
+function demo_start(zufall)
  demo=opt
  opt={}
  for k,v in pairs(demo) do opt[k]=v end
  opt.gegner=2
- opt.runden=1
- if demo_zufall then
-  opt.strecke=flr(rnd(6))+1
-  opt.strasse=flr(rnd(3))+1
+ -- nach ruhe im menue: eine runde,
+ -- zufaellige strecke + belag
+ if zufall then
+  opt.runden=1
+  if demo_zufall then
+   opt.strecke=flr(rnd(6))+1
+   opt.strasse=flr(rnd(3))+1
+  end
  end
  neues_rennen()
  auto.vmax=vmax*gegner_tempo
