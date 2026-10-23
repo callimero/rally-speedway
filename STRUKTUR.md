@@ -167,6 +167,8 @@ Gelb (`auto`) und Blau (`gegner`) sind Tabellen gleicher Form (`new_auto`):
   kürzesten Weg. Fährt Gelb über den Rand, verschiebt `welt_rum` alles mit,
   damit die Zahlen klein bleiben. Blau wird jedes Frame nahe Gelb gerechnet.
 - `gitter[feld]` = Teilnummer (Feld = Zeile·32 + Spalte).
+- **Engstelle** = Teil 3 (auf allen Strecken). Die Busch-Reihe am Randstein
+  ist dort halbiert: Sprites 254/255 = halbe Büsche (`original.py` baut sie).
 - **Teile in der Map**: die 28 benutzten Teile als Zeichen-Raster,
   8 nebeneinander (`teil_map`). Map-Zeilen 0–55.
 - **Zeichen = Sprites**: Jedes C64-Zeichen ist ein Sprite, gespeichert
@@ -265,4 +267,4 @@ Hex), dann `pico8 -x test.p8`.
 - **Komprimierter Code** (15 616 Byte): Kommentare zählen mit. Deshalb liegen
   die Streckendaten im SFX-Speicher. Nach größeren Änderungen den Export
   prüfen („could not compress code“).
-- **Sprites**: 103 von 105 freien Plätzen sind mit Zeichen belegt.
+- **Sprites**: 103 von 105 freien Plätzen sind mit Zeichen belegt, die letzten zwei (254/255) sind die halben Büsche der Engstelle – es ist kein Sprite mehr frei.

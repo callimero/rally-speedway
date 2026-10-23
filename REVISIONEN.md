@@ -326,3 +326,8 @@ Auswertung von 90 Demo-Rennen plus Messung am Start (Strecke 5 und 6):
   `ki_ref_mph` (80), schneller fährt der Computer in Kurven nie. Über dem
   Bezugstempo schaut er je 0,5 px/Frame ein Feld weiter voraus (Bremsweg).
   Bei 60 mph bremst er dadurch etwas weniger als vorher.
+- **Engstelle entschärft:** Alle Engstellen aller Strecken sind dasselbe
+  Teil 3 (Map x 32–47, y 0–13). Die Busch-Zeichen direkt am Randstein
+  (Zeichenzeile 4 oben, 9 unten) sind jetzt halbe Büsche (Sprites 254/255): 2 px Gras am Randstein, die
+  Straße bleibt gleich breit. `original.py` macht das beim Neu-Erzeugen der
+  Map ebenso.
