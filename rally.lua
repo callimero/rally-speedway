@@ -43,7 +43,7 @@ gegner_max=1.04
 --  brems: bremst ab abweichung
 profil={
  {blick=24,kurve={0.2,0.4,0.6},toleranz=0.008,brems=0.03},
- {blick=44,kurve={0.2,0.4,0.6},toleranz=0.008,brems=0.03},
+ {blick=24,kurve={0.2,0.4,0.6},toleranz=0.008,brems=0.03},
 }
 rempel_abstand=7 -- px
 rempel_stoss=0.2 -- abprall
@@ -62,16 +62,16 @@ ueberhol_versatz=8 -- px seitlich
 ki_gerade=0.06
 
 --== windschatten (beide) ==
-windschatten_laenge=40 -- px ab
+windschatten_laenge=100 -- px ab
                 -- heck (3 autos)
 windschatten_breite=8 -- px quer
                 -- bis ganz draussen
 windschatten_max=0.2 -- +20% tempo
                 -- direkt am heck
 -- motor des anderen autos
-ton2_tiefer=3   -- halbtoene
+ton2_tiefer=2   -- halbtoene
 ton2_weite=128  -- px: ab da still
-hinten_bonus=0.2 -- +10% tempo fuer
+hinten_bonus=0.25 -- +25% tempo fuer
                 -- den, der hinten
                 -- liegt (beide)
 
@@ -79,6 +79,9 @@ hinten_bonus=0.2 -- +10% tempo fuer
 zeige_linie=false -- ideallinie
 demo_warten=600 -- frames ruhe im
                 -- menue, dann demo
+demo_zufall=true -- demo: zufaellige
+                -- strecke + belag,
+                -- false = menuewerte
 
 
 --== menue ==
@@ -1019,12 +1022,17 @@ end
 
 -- ====== demo ======
 -- beide autos faehrt der
--- computer, mit den menuewerten
+-- computer, eine runde
 function demo_start()
  demo=opt
  opt={}
  for k,v in pairs(demo) do opt[k]=v end
  opt.gegner=2
+ opt.runden=1
+ if demo_zufall then
+  opt.strecke=flr(rnd(6))+1
+  opt.strasse=flr(rnd(3))+1
+ end
  neues_rennen()
  auto.vmax=vmax*gegner_tempo
  auto.profil=profil[1]
